@@ -45,6 +45,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => {
+    // Detect Vercel HTML fallback overrides on API routes and reject them
+    if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+      return Promise.reject(new Error('HTML fallback response returned instead of JSON'));
+    }
+    return response;
+  },
+  (error) => Promise.reject(error)
+);
+
 export const dashboardApi = {
   async getStats(): Promise<DashboardStats> {
     try {
