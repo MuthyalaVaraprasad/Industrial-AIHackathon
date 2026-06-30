@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { Menu, Bell, Search, Play, CheckCircle, FileText, Activity, User, BookOpen, Shield, Folder, ArrowLeft } from 'lucide-react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { Menu, Bell, Search, Play, CheckCircle, FileText, Activity, User, BookOpen, Shield, Folder, ArrowLeft, Loader2 } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '@/store/AuthContext';
 import { Badge } from '@/components/ui/Badge';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { QuickActionsFAB } from '@/components/common/QuickActionsFAB';
 
 interface SearchItem {
   name: string;
@@ -64,6 +65,23 @@ function FloatingCrystalIndicator() {
   );
 }
 
+interface NotificationItem {
+  id: string;
+  type: 'ocr' | 'ai_summary' | 'compliance' | 'maintenance' | 'report' | 'risk' | 'comment';
+  title: string;
+  desc: string;
+  time: string;
+  read: boolean;
+}
+
+const INITIAL_NOTIFICATIONS: NotificationItem[] = [
+  { id: 'n-1', type: 'ocr', title: 'OCR Processing Complete', desc: 'Pump P-101 Failure Report manual successfully ingested.', time: '5m ago', read: false },
+  { id: 'n-2', type: 'ai_summary', title: 'AI Executive Summary Ready', desc: 'Summary and key performance gaps computed for Unit 4.', time: '10m ago', read: false },
+  { id: 'n-3', type: 'compliance', title: 'OSHA compliance alert', desc: 'Lockout/Tagout log missing Q2 audits.', time: '1h ago', read: false },
+  { id: 'n-4', type: 'maintenance', title: 'Critical Vibration Risk', desc: 'C-204 vibration levels exceed safety threshold.', time: '2h ago', read: false },
+  { id: 'n-5', type: 'report', title: 'Report compiled successfully', desc: 'Monthly Operational cost summary PDF is ready.', time: '1d ago', read: true }
+];
+
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -73,16 +91,70 @@ export function AppLayout() {
   // Search States
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Recent Searches History
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('industria_recent_searches');
+      return stored ? JSON.parse(stored) : ['Pump P-101', 'OSHA separator guidelines', 'HX-301'];
+    } catch {
+      return ['Pump P-101', 'OSHA separator guidelines', 'HX-301'];
+    }
+  });
+
+  // Notification States
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('industria_notifications');
+      return stored ? JSON.parse(stored) : INITIAL_NOTIFICATIONS;
+    } catch {
+      return INITIAL_NOTIFICATIONS;
+    }
+  });
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsContainerRef = useRef<HTMLDivElement>(null);
+
+  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+
+  // Keyboard shortcut Ctrl+K listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setSearchFocused(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Simulated search debounce loading state
+  useEffect(() => {
+    if (searchQuery) {
+      setSearchLoading(true);
+      const timer = setTimeout(() => setSearchLoading(false), 250);
+      return () => clearTimeout(timer);
+    } else {
+      setSearchLoading(false);
+    }
+  }, [searchQuery]);
 
   // Demo Mode States
   const [demoLoadedAlert, setDemoLoadedAlert] = useState(false);
 
-  // Close search suggestions on click outside
+  // Close search suggestions & notifications on click outside
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setSearchFocused(false);
+      }
+      if (notificationsContainerRef.current && !notificationsContainerRef.current.contains(e.target as Node)) {
+        setNotificationsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -127,10 +199,35 @@ export function AppLayout() {
 
   const filteredSearchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return GLOBAL_SEARCH_ITEMS.filter((item) =>
-      fuzzyMatch(item.name, searchQuery) || fuzzyMatch(item.category, searchQuery)
-    ).slice(0, 6);
-  }, [searchQuery]);
+    return GLOBAL_SEARCH_ITEMS.filter((item) => {
+      const matchesSearch = fuzzyMatch(item.name, searchQuery) || fuzzyMatch(item.category, searchQuery) || fuzzyMatch(item.desc, searchQuery);
+      const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    }).slice(0, 6);
+  }, [searchQuery, selectedCategory]);
+
+  const handleSelectSearchItem = (path: string, name: string) => {
+    // Save to history
+    const nextHistory = [name, ...recentSearches.filter(q => q !== name)].slice(0, 5);
+    setRecentSearches(nextHistory);
+    localStorage.setItem('industria_recent_searches', JSON.stringify(nextHistory));
+    
+    navigate(path);
+    setSearchQuery('');
+    setSearchFocused(false);
+  };
+
+  const handleMarkAllRead = () => {
+    const updated = notifications.map(n => ({ ...n, read: true }));
+    setNotifications(updated);
+    localStorage.setItem('industria_notifications', JSON.stringify(updated));
+  };
+
+  const handleToggleRead = (id: string) => {
+    const updated = notifications.map(n => n.id === id ? { ...n, read: !n.read } : n);
+    setNotifications(updated);
+    localStorage.setItem('industria_notifications', JSON.stringify(updated));
+  };
 
   // One-click Demo Mode loader
   const handleAutoLoadDemo = () => {
@@ -189,20 +286,65 @@ export function AppLayout() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onFocus={() => setSearchFocused(true)}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Global smart search (assets, docs, reports, notes...)"
-                className="input-field pl-10 text-xs md:text-sm !mb-0 w-full bg-surface-850 border-white/5 focus:border-primary-500/30 transition-all py-2"
+                placeholder="Global smart search (assets, docs, reports, notes...) [Ctrl+K]"
+                className="input-field pl-10 pr-10 text-xs md:text-sm !mb-0 w-full bg-surface-850 border-white/5 focus:border-primary-500/30 transition-all py-2"
               />
+              {searchLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="w-3.5 h-3.5 text-primary-400 animate-spin" />
+                </div>
+              )}
             </div>
 
             {/* Smart Suggestions dropdown overlay with Search Fallback Recommendations */}
-            {searchFocused && searchQuery && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-surface-800/95 backdrop-blur-xl border border-white/5 rounded-xl shadow-2xl p-2 z-50 text-xs space-y-1">
-                <div className="px-2 py-1.5 border-b border-white/5 text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Search Results</div>
-                {filteredSearchResults.length === 0 ? (
+            {searchFocused && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-surface-800/95 backdrop-blur-xl border border-white/5 rounded-xl shadow-2xl p-3 z-50 text-xs space-y-2 max-h-96 overflow-y-auto scrollbar-thin">
+                {/* Category filters */}
+                <div className="flex gap-1 overflow-x-auto pb-1.5 border-b border-white/5 scrollbar-none shrink-0">
+                  {['All', 'Document', 'Asset', 'Report', 'Compliance', 'Lessons Learned'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCategory(cat);
+                      }}
+                      className={`px-2 py-0.5 rounded text-[10px] whitespace-nowrap cursor-pointer transition-colors ${
+                        selectedCategory === cat
+                          ? 'bg-primary-500 text-white font-bold'
+                          : 'bg-surface-850 hover:bg-surface-700 text-slate-400 hover:text-slate-300'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {!searchQuery.trim() ? (
+                  <div className="space-y-2">
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Recent Searches</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {recentSearches.map((term, i) => (
+                        <button
+                          key={term + i}
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery(term);
+                            searchInputRef.current?.focus();
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-surface-850 hover:bg-surface-700 text-slate-300 hover:text-white cursor-pointer font-medium"
+                        >
+                          🔍 {term}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : filteredSearchResults.length === 0 ? (
                   <div className="p-3 text-left space-y-2">
                     <p className="text-slate-500 font-semibold mb-1">No direct matches found. Try these related modules:</p>
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -216,11 +358,7 @@ export function AppLayout() {
                   filteredSearchResults.map((res: SearchItem, i: number) => (
                     <div
                       key={i}
-                      onClick={() => {
-                        navigate(res.path);
-                        setSearchQuery('');
-                        setSearchFocused(false);
-                      }}
+                      onClick={() => handleSelectSearchItem(res.path, res.name)}
                       className="p-2 rounded-lg hover:bg-surface-700/50 flex items-center justify-between cursor-pointer transition-colors"
                     >
                       <div className="min-w-0 flex-1">
@@ -255,10 +393,58 @@ export function AppLayout() {
               <Play className="w-3.5 h-3.5 fill-current" /> Auto-Load Demo
             </button>
 
-            <Link to="/app/alerts" className="relative btn-ghost p-2" aria-label="Notifications">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-accent-red rounded-full" />
-            </Link>
+            {/* Interactive Notification Center bell panel dropdown */}
+            <div ref={notificationsContainerRef} className="relative">
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="relative btn-ghost p-2 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                aria-label="Notifications Panel"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 bg-accent-red text-white text-[8px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-surface-900">
+                    {unreadNotificationsCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-surface-800/95 backdrop-blur-xl border border-white/5 rounded-xl shadow-2xl p-2 z-50 text-xs space-y-2">
+                  <div className="flex justify-between items-center px-2 py-1.5 border-b border-white/5">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Notification Center</span>
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-[9px] text-primary-400 hover:text-primary-300 cursor-pointer font-medium"
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-64 overflow-y-auto scrollbar-thin">
+                    {notifications.length === 0 ? (
+                      <p className="text-slate-500 text-center py-4">No notifications</p>
+                    ) : (
+                      notifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          onClick={() => handleToggleRead(notif.id)}
+                          className={`p-2 rounded-lg transition-colors flex items-start gap-2.5 cursor-pointer ${
+                            notif.read ? 'hover:bg-surface-750 opacity-60' : 'bg-primary-500/5 hover:bg-primary-500/10 border-l-2 border-primary-500'
+                          }`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start gap-2">
+                              <p className={`font-semibold text-white truncate ${notif.read ? '' : 'text-primary-300'}`}>{notif.title}</p>
+                              <span className="text-[9px] text-slate-500 shrink-0">{notif.time}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">{notif.desc}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -274,6 +460,9 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating Action Button for Quick Actions */}
+      <QuickActionsFAB onOpenSearch={() => { setSearchFocused(true); searchInputRef.current?.focus(); }} />
     </div>
   );
 }
