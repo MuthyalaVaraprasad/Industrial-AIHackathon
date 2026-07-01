@@ -150,4 +150,41 @@
   .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply bg-primary-500/30 rounded-full;
   }
+
+  @keyframes spin-clockwise {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes spin-counterclockwise {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.35; transform: scale(1); }
+    50% { opacity: 0.75; transform: scale(1.05); }
+  }
+  @keyframes float-slow {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-15px) rotate(3deg); }
+  }
+  @keyframes float-medium {
+    0%, 100% { transform: translateY(0px) translateX(0px); }
+    50% { transform: translateY(-10px) translateX(10px); }
+  }
+
+  .animate-spin-clockwise {
+    animation: spin-clockwise 25s linear infinite;
+  }
+  .animate-spin-counterclockwise {
+    animation: spin-counterclockwise 35s linear infinite;
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 8s ease-in-out infinite;
+  }
+  .animate-float-slow {
+    animation: float-slow 16s ease-in-out infinite;
+  }
+  .animate-float-medium {
+    animation: float-medium 12s ease-in-out infinite;
+  }
 }

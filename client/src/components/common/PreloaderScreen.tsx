@@ -1,109 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { useState, useEffect } from 'react';
 import { Terminal, Activity, ArrowRight } from 'lucide-react';
-import * as THREE from 'three';
-
-// 3D Matrix Nodes animation matching sign-in matrix background
-function MatrixNodesPreloader() {
-  const pointsRef = useRef<THREE.Points>(null);
-
-  useEffect(() => {
-    if (!pointsRef.current) return;
-    const geometry = pointsRef.current.geometry;
-    const positions = [];
-    const count = 350;
-    for (let i = 0; i < count; i++) {
-      positions.push(
-        (Math.random() - 0.5) * 8,
-        (Math.random() - 0.5) * 8,
-        (Math.random() - 0.5) * 8
-      );
-    }
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  }, []);
-
-  useFrame((state) => {
-    if (pointsRef.current) {
-      pointsRef.current.rotation.y = state.clock.getElapsedTime() * 0.08;
-      pointsRef.current.rotation.x = state.clock.getElapsedTime() * 0.04;
-    }
-  });
-
-  return (
-    <points ref={pointsRef}>
-      <bufferGeometry />
-      <pointsMaterial
-        color="#06b6d4"
-        size={0.05}
-        transparent
-        opacity={0.5}
-        blending={THREE.AdditiveBlending}
-        depthWrite={false}
-      />
-    </points>
-  );
-}
-
-// 3D Spinning Gyroscope Ring Assembly
-function GyroscopePreloader() {
-  const outerRingRef = useRef<THREE.Mesh>(null);
-  const midRingRef = useRef<THREE.Mesh>(null);
-  const innerRingRef = useRef<THREE.Mesh>(null);
-  const coreRef = useRef<THREE.Mesh>(null);
-
-  useFrame((state) => {
-    const elapsed = state.clock.getElapsedTime();
-
-    if (outerRingRef.current) {
-      outerRingRef.current.rotation.x = elapsed * 0.5;
-      outerRingRef.current.rotation.y = elapsed * 0.2;
-    }
-    if (midRingRef.current) {
-      midRingRef.current.rotation.y = -elapsed * 0.6;
-      midRingRef.current.rotation.z = elapsed * 0.3;
-    }
-    if (innerRingRef.current) {
-      innerRingRef.current.rotation.z = elapsed * 0.8;
-      innerRingRef.current.rotation.x = -elapsed * 0.4;
-    }
-    if (coreRef.current) {
-      coreRef.current.position.y = Math.sin(elapsed * 2) * 0.05;
-    }
-  });
-
-  return (
-    <group scale={1.2}>
-      {/* Outer Ring */}
-      <mesh ref={outerRingRef}>
-        <torusGeometry args={[1.5, 0.05, 16, 100]} />
-        <meshStandardMaterial color="#0891b2" emissive="#06b6d4" emissiveIntensity={0.6} wireframe />
-      </mesh>
-
-      {/* Middle Ring */}
-      <mesh ref={midRingRef}>
-        <torusGeometry args={[1.15, 0.04, 16, 80]} />
-        <meshStandardMaterial color="#6366f1" emissive="#4f46e5" emissiveIntensity={0.5} wireframe />
-      </mesh>
-
-      {/* Inner Ring */}
-      <mesh ref={innerRingRef}>
-        <torusGeometry args={[0.8, 0.03, 16, 60]} />
-        <meshStandardMaterial color="#10b981" emissive="#059669" emissiveIntensity={0.5} wireframe />
-      </mesh>
-
-      {/* Core Sphere */}
-      <mesh ref={coreRef}>
-        <icosahedronGeometry args={[0.38, 2]} />
-        <meshStandardMaterial
-          color="#22d3ee"
-          emissive="#22d3ee"
-          emissiveIntensity={1.0}
-          wireframe
-        />
-      </mesh>
-    </group>
-  );
-}
 
 const LOG_MESSAGES = [
   'Initializing Core Neural Net...',
@@ -151,14 +47,24 @@ export function PreloaderScreen({ onEnter }: { onEnter: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-[#070b13] flex flex-col items-center justify-center overflow-hidden">
-      {/* 3D Gyroscope Canvas with Ambient Matrix Particles */}
-      <div className="absolute inset-0 z-0 opacity-60">
-        <Canvas camera={{ position: [0, 0, 4] }}>
-          <ambientLight intensity={0.5} />
-          <pointLight position={[10, 10, 10]} intensity={1.5} color="#22d3ee" />
-          <MatrixNodesPreloader />
-          <GyroscopePreloader />
-        </Canvas>
+      {/* Dynamic Animated CSS Orbital Ring Background (replacing 3D Three.js canvas) */}
+      <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
+        {/* Outer Ring */}
+        <div className="absolute w-[360px] h-[360px] md:w-[500px] md:h-[500px] rounded-full border border-dashed border-cyan-500/20 animate-spin-clockwise" />
+        
+        {/* Middle Ring */}
+        <div className="absolute w-[260px] h-[260px] md:w-[380px] md:h-[380px] rounded-full border border-dotted border-indigo-500/25 animate-spin-counterclockwise" />
+        
+        {/* Inner Ring */}
+        <div className="absolute w-[180px] h-[180px] md:w-[260px] md:h-[260px] rounded-full border border-dashed border-emerald-500/20 animate-spin-clockwise" />
+
+        {/* Core Glowing Orb */}
+        <div className="absolute w-24 h-24 rounded-full bg-cyan-500/10 blur-xl animate-pulse-glow" />
+        <div className="absolute w-8 h-8 rounded-full border border-cyan-400/40 animate-pulse" />
+
+        {/* Ambient floating blur particles */}
+        <div className="absolute top-[20%] left-[15%] w-72 h-72 rounded-full bg-indigo-500/5 blur-[80px] animate-float-slow" />
+        <div className="absolute bottom-[20%] right-[15%] w-80 h-80 rounded-full bg-cyan-500/5 blur-[90px] animate-float-medium" />
       </div>
 
       {/* Grid background mask overlay */}
@@ -167,7 +73,7 @@ export function PreloaderScreen({ onEnter }: { onEnter: () => void }) {
       {/* Gradient glow center */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.08),transparent)] pointer-events-none" />
 
-      <div className="z-10 text-center max-w-md px-6 flex flex-col items-center select-none">
+      <div className="z-10 text-center max-w-md px-6 flex flex-col items-center select-none animate-float-slow">
         <div className="space-y-3 mb-8">
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 text-[10px] font-bold text-accent-cyan tracking-wider uppercase">
             <Activity className="w-3.5 h-3.5 animate-pulse" /> Operations Engine Online
@@ -200,9 +106,9 @@ export function PreloaderScreen({ onEnter }: { onEnter: () => void }) {
                 <span>SYSTEM SYNCHRONIZATION</span>
                 <span>{percent}%</span>
               </div>
-              <div className="w-full h-1 bg-surface-800 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-surface-800 rounded-full overflow-hidden border border-white/5">
                 <div
-                  className="h-full bg-accent-cyan rounded-full transition-all duration-75"
+                  className="h-full bg-gradient-to-r from-primary-500 via-accent-cyan to-accent-green transition-all duration-75 rounded-full shadow-[0_0_8px_#22d3ee]"
                   style={{ width: `${percent}%` }}
                 />
               </div>
