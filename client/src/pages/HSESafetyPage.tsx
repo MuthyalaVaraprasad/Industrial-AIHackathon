@@ -11,6 +11,8 @@ export default function HSESafetyPage() {
   const [safetyScore] = useState(96);
   const [sirenOn, setSirenOn] = useState(false);
   const [pinged, setPinged] = useState(false);
+  const [retireNotes, setRetireNotes] = useState('');
+  const [retireSuccess, setRetireSuccess] = useState(false);
 
   // Features states
   const [gasLeakRate] = useState(0.00);
@@ -58,6 +60,18 @@ export default function HSESafetyPage() {
 
   const handleApprovePermit = (id: number) => {
     setPermits(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved', signer: 'Safety Officer' } : p));
+  };
+
+  const handleSaveRetireNotes = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!retireNotes) return;
+    setRetireSuccess(true);
+    setViolations(prev => [
+      { id: Date.now(), msg: `Captured operator knowledge: "${retireNotes.substring(0, 35)}..."`, time: 'Just now' },
+      ...prev
+    ]);
+    setRetireNotes('');
+    setTimeout(() => setRetireSuccess(false), 2000);
   };
 
   const handleTriggerDrill = () => {
@@ -262,6 +276,44 @@ export default function HSESafetyPage() {
                     <span className="text-slate-600 shrink-0 ml-1">{v.time}</span>
                   </div>
                 ))}
+              </div>
+            </Card>
+
+            {/* Retiring Engineer Knowledge Capture Panel */}
+            <Card className="bg-surface-900 border border-white/5 p-4 space-y-3">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-2">
+                🪶 Retiring Operator Knowledge Cliff Capture
+              </h3>
+              <form onSubmit={handleSaveRetireNotes} className="space-y-3 text-xs">
+                <textarea
+                  rows={2} value={retireNotes} onChange={(e) => setRetireNotes(e.target.value)}
+                  placeholder="Type undocumented operational secrets, Pump alignment checks details..."
+                  className="w-full bg-surface-850 border border-white/5 text-white rounded p-2 text-xs focus:ring-0 focus:border-primary-500"
+                />
+                <Button type="submit" className="w-full text-[10px] py-1.5 h-auto">
+                  {retireSuccess ? 'Knowledge Vectorized & Synced!' : 'Capture Knowledge'}
+                </Button>
+              </form>
+            </Card>
+
+            {/* Cross-System Connector Audit */}
+            <Card className="bg-surface-900 border border-white/5 p-4 space-y-2.5 text-xs">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-2">
+                🔗 Disconnected Systems Ingestion Audit
+              </h3>
+              <div className="space-y-1 text-[9px] font-mono text-slate-400">
+                <div className="flex justify-between">
+                  <span>P&IDs System (Vapor CAD):</span>
+                  <Badge variant="success">Connected</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span>Email Archives (OSHA compliance):</span>
+                  <Badge variant="success">Connected</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span>Maintenance CMMS Logs:</span>
+                  <Badge variant="success">Connected</Badge>
+                </div>
               </div>
             </Card>
 

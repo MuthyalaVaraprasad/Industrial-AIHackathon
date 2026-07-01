@@ -25,7 +25,7 @@ const DocumentsPage = lazy(() => import('@/pages/DocumentsPage'));
 const ProcessingPage = lazy(() => import('@/pages/ProcessingPage'));
 const CopilotPage = lazy(() => import('@/pages/CopilotPage'));
 const MaintenancePage = lazy(() => import('@/pages/MaintenancePage'));
-const ExecutivePage = lazy(() => import('@/pages/ExecutivePage'));
+const CrossSystemLinkerPage = lazy(() => import('@/pages/CrossSystemLinkerPage'));
 const QRScannerPage = lazy(() => import('@/pages/QRScannerPage'));
 const SimulatorPage = lazy(() => import('@/pages/SimulatorPage'));
 const CollaborationPage = lazy(() => import('@/pages/CollaborationPage'));
@@ -97,7 +97,7 @@ export default function App() {
               <Route path="processing/:id" element={<LazyPage><ProcessingPage /></LazyPage>} />
               <Route path="copilot" element={<LazyPage><CopilotPage /></LazyPage>} />
               <Route path="maintenance" element={<LazyPage><MaintenancePage /></LazyPage>} />
-              <Route path="executive" element={<LazyPage><ExecutivePage /></LazyPage>} />
+              <Route path="cross-system-linker" element={<LazyPage><CrossSystemLinkerPage /></LazyPage>} />
               <Route path="qr-scanner" element={<LazyPage><QRScannerPage /></LazyPage>} />
               <Route path="simulator" element={<LazyPage><SimulatorPage /></LazyPage>} />
               <Route path="collaboration" element={<LazyPage><CollaborationPage /></LazyPage>} />

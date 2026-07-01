@@ -14,7 +14,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'processing', label: 'OCR & Processing', path: '/app/processing', icon: 'Scan', enabled: true },
   { id: 'copilot', label: 'AI Copilot', path: '/app/copilot', icon: 'MessageSquare', enabled: true },
   { id: 'maintenance', label: 'Predictive Maintenance', path: '/app/maintenance', icon: 'Wrench', enabled: true },
-  { id: 'executive', label: 'Executive Center', path: '/app/executive', icon: 'BarChart3', enabled: true },
+  { id: 'cross-system-linker', label: 'Enterprise Systems Linker', path: '/app/cross-system-linker', icon: 'GitBranch', enabled: true },
   { id: 'qr-scanner', label: 'QR Asset Scanner', path: '/app/qr-scanner', icon: 'QrCode', enabled: true },
   { id: 'simulator', label: 'AI Impact Simulator', path: '/app/simulator', icon: 'Sliders', enabled: true },
   { id: 'collaboration', label: 'Team Notes', path: '/app/collaboration', icon: 'Users', enabled: true },
