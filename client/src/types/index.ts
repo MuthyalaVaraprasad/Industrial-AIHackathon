@@ -135,6 +135,9 @@ export interface CopilotMessage {
   sources?: CopilotSource[];
   confidence?: number;
   recommendations?: string[];
+  reasoningSummary?: string;
+  relatedDocuments?: string[];
+  relatedAssets?: string[];
 }
 
 export interface CopilotSource {

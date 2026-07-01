@@ -10,6 +10,9 @@ export interface CopilotMessageResult {
   sources: { title: string; page?: string; documentId?: string }[];
   confidence: number;
   recommendations: string[];
+  reasoningSummary?: string;
+  relatedDocuments?: string[];
+  relatedAssets?: string[];
 }
 
 export async function handleCopilotChat(message: string): Promise<CopilotMessageResult> {
@@ -29,6 +32,9 @@ export async function handleCopilotChat(message: string): Promise<CopilotMessage
       sources,
       confidence: aiResponse.confidence,
       recommendations: aiResponse.recommendations,
+      reasoningSummary: 'RAG generation triggered over active document vector chunks.',
+      relatedDocuments: chunks.map(c => c.title).filter((v, i, a) => a.indexOf(v) === i),
+      relatedAssets: ['Centrifugal Pump P-101'],
     };
   }
 
@@ -43,6 +49,9 @@ export async function handleCopilotChat(message: string): Promise<CopilotMessage
     sources: { title: string; page?: string; documentId?: string }[];
     confidence: number;
     recommendations: string[];
+    reasoningSummary?: string;
+    relatedDocuments?: string[];
+    relatedAssets?: string[];
   };
 
   return {
@@ -53,5 +62,8 @@ export async function handleCopilotChat(message: string): Promise<CopilotMessage
     sources: template.sources,
     confidence: template.confidence,
     recommendations: template.recommendations,
+    reasoningSummary: template.reasoningSummary,
+    relatedDocuments: template.relatedDocuments,
+    relatedAssets: template.relatedAssets,
   };
 }

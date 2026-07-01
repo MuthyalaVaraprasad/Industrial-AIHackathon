@@ -210,7 +210,10 @@ export const modulesApi = {
         timestamp: new Date().toISOString(),
         confidence: 85,
         sources: [{ title: 'Local Cache Diagnostics Index', page: 'Fallback' }],
-        recommendations: ['Check temperature sensor status', 'Verify CMMS work orders history']
+        recommendations: ['Check temperature sensor status', 'Verify CMMS work orders history'],
+        reasoningSummary: 'RAG search matched general terms against local cache fallback index.',
+        relatedDocuments: ['Pump P-101 Failure Report.pdf'],
+        relatedAssets: ['Centrifugal Pump P-101']
       };
     }
   },

@@ -190,6 +190,9 @@ export const copilotResponses: Record<string, object> = {
       'Query: "What is the maintenance history of HX-301?"',
       'Query: "Show me outstanding compliance gaps"'
     ],
+    reasoningSummary: 'RAG search matched general terms against operational asset index.',
+    relatedDocuments: ['Asset Catalog.pdf'],
+    relatedAssets: ['Centrifugal Pump P-101', 'Heat Exchanger HX-301']
   },
   'p-101': {
     content: 'Pump P-101 experienced an unplanned failure on May 28, 2026. Root cause analysis identified mechanical seal degradation due to operating temperature exceeding design limits (92°C vs 85°C max). The seal replacement was 45 days overdue per CMMS Work Order #4521.',
@@ -204,6 +207,9 @@ export const copilotResponses: Record<string, object> = {
       'Install redundant temperature sensors',
       'Reduce maintenance interval to 60 days',
     ],
+    reasoningSummary: 'RCA analysis engine matched thermal seal wear patterns with historic telemetry data.',
+    relatedDocuments: ['Pump P-101 Failure Report.pdf', 'CMMS Work Order Log #4521.xlsx'],
+    relatedAssets: ['Centrifugal Pump P-101']
   },
   maintenance: {
     content: 'Pump P-101 maintenance history shows: bearing lubrication (Mar 15, 2026), impeller inspection (Jan 20, 2026), and full teardown inspection (Nov 5, 2025). Current seal replacement is 45 days overdue with high failure risk score of 87%.',
@@ -213,6 +219,9 @@ export const copilotResponses: Record<string, object> = {
     ],
     confidence: 91,
     recommendations: ['Schedule seal replacement within 7 days', 'Review cooling water flow rates'],
+    reasoningSummary: 'Predictive algorithm evaluated elapsed time since last inspection against bearing wear coefficients.',
+    relatedDocuments: ['Maintenance Manual P-101.pdf'],
+    relatedAssets: ['Centrifugal Pump P-101']
   },
   compliance: {
     content: 'Overall compliance score is 92%. ISO 45001 is non-compliant (68%) with 2 missing reports. OSHA 1910 is partially compliant — missing Lockout/Tagout Log for Q2. ISO 14001 and API 610 are fully compliant.',
@@ -222,5 +231,8 @@ export const copilotResponses: Record<string, object> = {
     ],
     confidence: 96,
     recommendations: ['Complete ISO 45001 remediation within 30 days', 'Update safety training records for 12 technicians'],
+    reasoningSummary: 'Safety audit auditor parser checked checklist indexes against regulatory requirements.',
+    relatedDocuments: ['OSHA Standard 1910.119', 'HSE Q2 Training Schedule.csv'],
+    relatedAssets: ['Centrifugal Pump P-101', 'Heat Exchanger HX-301']
   },
 };

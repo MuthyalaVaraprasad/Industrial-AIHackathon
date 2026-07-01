@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   Send, Bot, User, FileText, Sparkles, Volume2, VolumeX, Copy, Check,
-  Download, Plus, MessageSquare, History, Sliders
+  Download, Plus, MessageSquare, History, Sliders, Box
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { modulesApi } from '@/services/api';
@@ -49,6 +49,9 @@ const MOCK_HISTORY_SESSIONS: ChatSession[] = [
         confidence: 94,
         sources: [{ title: 'Pump P-101 Failure Report', page: 'Page 3' }],
         recommendations: ['Perform shaft alignment calibration', 'Replace mechanical seal with type-B variant'],
+        reasoningSummary: 'RCA analysis engine matched thermal seal wear patterns with historic telemetry data.',
+        relatedDocuments: ['Pump P-101 Failure Report.pdf', 'CMMS Work Order Log #4521.xlsx'],
+        relatedAssets: ['Centrifugal Pump P-101']
       }
     ]
   },
@@ -65,6 +68,10 @@ const MOCK_HISTORY_SESSIONS: ChatSession[] = [
         timestamp: '2026-06-25T14:30:20Z',
         confidence: 91,
         sources: [{ title: 'ISO 14001 Standards Audit Checklist', page: 'Annex B' }],
+        recommendations: ['Complete ISO 45001 remediation within 30 days', 'Update safety training records for 12 technicians'],
+        reasoningSummary: 'Safety audit auditor parser checked checklist indexes against regulatory requirements.',
+        relatedDocuments: ['OSHA Standard 1910.119', 'HSE Q2 Training Schedule.csv'],
+        relatedAssets: ['Centrifugal Pump P-101', 'Heat Exchanger HX-301']
       }
     ]
   }
@@ -322,6 +329,39 @@ export default function CopilotPage() {
                           <Badge variant={msg.confidence > 85 ? 'success' : 'warning'} className="text-[9px] px-1 py-0.5">
                             {msg.confidence}% confidence
                           </Badge>
+                        )}
+
+                        {msg.reasoningSummary && (
+                          <div className="text-left bg-surface-850/50 p-2.5 rounded-xl border border-white/5 space-y-1">
+                            <p className="text-[10px] font-semibold text-accent-cyan flex items-center gap-1"><Sliders className="w-3.5 h-3.5" /> Reasoning Summary</p>
+                            <p className="text-xs text-slate-300 leading-relaxed font-sans">{msg.reasoningSummary}</p>
+                          </div>
+                        )}
+
+                        {msg.relatedDocuments && msg.relatedDocuments.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-slate-500 flex items-center gap-1"><FileText className="w-3 h-3" /> Related Documents</p>
+                            <div className="flex flex-wrap gap-1">
+                              {msg.relatedDocuments.map((doc, idx) => (
+                                <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-surface-850 border border-white/5 text-slate-450 inline-block font-mono">
+                                  📄 {doc}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {msg.relatedAssets && msg.relatedAssets.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-slate-500 flex items-center gap-1"><Box className="w-3 h-3" /> Related Assets</p>
+                            <div className="flex flex-wrap gap-1">
+                              {msg.relatedAssets.map((asset, idx) => (
+                                <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-surface-850 border border-white/5 text-slate-400 inline-block font-semibold">
+                                  ⚙️ {asset}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         )}
 
                         {msg.recommendations && (
