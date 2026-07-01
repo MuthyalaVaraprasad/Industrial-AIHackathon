@@ -34,13 +34,34 @@ export default function VoicePage() {
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [supported, setSupported] = useState(true);
 
-  // Voice synthesis speed and pitch
+  // Voice synthesis speed, pitch, and voice choice state
   const [rate, setRate] = useState(1.0);
   const [pitch, setPitch] = useState(1.0);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceName, setSelectedVoiceName] = useState('');
 
   useEffect(() => {
     setSupported('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
   }, []);
+
+  // Fetch available browser voices
+  useEffect(() => {
+    const loadVoices = () => {
+      if ('speechSynthesis' in window) {
+        const sysVoices = window.speechSynthesis.getVoices();
+        setVoices(sysVoices);
+        if (sysVoices.length > 0 && !selectedVoiceName) {
+          // Default to first english voice or default browser voice
+          const defaultVoice = sysVoices.find(v => v.lang.startsWith('en')) || sysVoices[0];
+          setSelectedVoiceName(defaultVoice.name);
+        }
+      }
+    };
+    loadVoices();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, [selectedVoiceName]);
 
   const getResponse = (text: string): string => {
     const lower = text.toLowerCase();
@@ -57,8 +78,16 @@ export default function VoicePage() {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = rate;
     utterance.pitch = pitch;
+
+    if (selectedVoiceName) {
+      const activeVoice = voices.find(v => v.name === selectedVoiceName);
+      if (activeVoice) {
+        utterance.voice = activeVoice;
+      }
+    }
+
     window.speechSynthesis.speak(utterance);
-  }, [ttsEnabled, rate, pitch]);
+  }, [ttsEnabled, rate, pitch, voices, selectedVoiceName]);
 
   const processCommand = useCallback((text: string) => {
     const userMsg: VoiceMessage = { id: `u-${Date.now()}`, role: 'user', text };
@@ -131,7 +160,7 @@ export default function VoicePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Main Voice Activation Card */}
-          <Card className="md:col-span-2 text-center py-10 flex flex-col items-center justify-center relative overflow-hidden">
+          <Card className="md:col-span-2 text-center py-10 bg-surface-900 border border-white/5 flex flex-col items-center justify-center relative overflow-hidden">
             <div
               onClick={toggleListening}
               className={cn(
@@ -180,9 +209,23 @@ export default function VoicePage() {
           </Card>
 
           {/* Voice Parameter Adjuster Card */}
-          <Card className="md:col-span-1 space-y-6">
+          <Card className="md:col-span-1 space-y-6 bg-surface-900 border border-white/5">
             <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5"><Sliders className="w-4 h-4 text-accent-cyan" /> Speech Parameters</h2>
             
+            {/* Voices selection */}
+            <div className="space-y-1.5 text-xs">
+              <label className="font-semibold text-slate-400">Synthesizer Voice Accent</label>
+              <select
+                value={selectedVoiceName}
+                onChange={(e) => setSelectedVoiceName(e.target.value)}
+                className="w-full bg-surface-850 border border-white/5 text-white rounded-lg p-2 text-xs focus:border-primary-500"
+              >
+                {voices.map(voice => (
+                  <option key={voice.name} value={voice.name}>{voice.name} ({voice.lang})</option>
+                ))}
+              </select>
+            </div>
+
             {/* Speed Rate Slider */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-slate-400 font-semibold">
@@ -232,8 +275,8 @@ export default function VoicePage() {
           </Card>
         </div>
 
-        {/* Interactive Preset Voice Commands Grid (Extra Dashboard Feature) */}
-        <Card className="p-5">
+        {/* Interactive Preset Voice Commands Grid */}
+        <Card className="p-5 bg-surface-900 border border-white/5">
           <h3 className="font-semibold text-white text-xs uppercase tracking-wider mb-3.5">Interactive Demo Shortcuts</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {VOICE_PRESET_SHORTCUTS.map((shortcut, idx) => (
@@ -251,7 +294,7 @@ export default function VoicePage() {
 
         {/* Conversations Log */}
         {messages.length > 0 && (
-          <Card className="p-5">
+          <Card className="p-5 bg-surface-900 border border-white/5">
             <h3 className="font-semibold text-white text-xs uppercase tracking-wider mb-3">Live Speech Log Stream</h3>
             <div className="space-y-3.5 max-h-64 overflow-y-auto scrollbar-thin">
               {messages.map((msg) => (

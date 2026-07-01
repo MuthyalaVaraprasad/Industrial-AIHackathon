@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   Send, Bot, User, FileText, Sparkles, Volume2, VolumeX, Copy, Check,
-  Download, Plus, MessageSquare, History
+  Download, Plus, MessageSquare, History, Sliders
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { modulesApi } from '@/services/api';
@@ -78,6 +78,14 @@ export default function CopilotPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   
+  // RAG Configuration States
+  const [model, setModel] = useState('gemini-1.5-pro');
+  const [temperature, setTemperature] = useState(0.2);
+  const [chunkSize, setChunkSize] = useState(512);
+  const [sourceCount, setSourceCount] = useState(4);
+  const [enableGraphReranking, setEnableGraphReranking] = useState(true);
+  const [strictSafety, setStrictSafety] = useState(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const chatMutation = useMutation({
@@ -100,23 +108,23 @@ export default function CopilotPage() {
     if (sessionId === 'current') {
       setMessages([INITIAL_WELCOME_MESSAGE()]);
     } else {
-      const selected = sessions.find((s) => s.id === sessionId);
-      if (selected) {
-        setMessages(selected.messages);
+      const sess = sessions.find((s) => s.id === sessionId);
+      if (sess) {
+        setMessages(sess.messages);
       }
     }
   };
 
-  // Start New Session
+  // Handle New Session
   const handleNewSession = () => {
-    if (activeSessionId === 'current' && messages.length <= 1) return;
-    
-    // Save current active session if it has user messages
-    if (activeSessionId === 'current' && messages.length > 1) {
-      const userMsgs = messages.filter((m) => m.role === 'user');
-      const firstTitle = userMsgs.length > 0 ? userMsgs[0].content.slice(0, 24) + '...' : 'Copilot Chat Session';
+    // Save current active messages if they contain user chat
+    const hasUserMsg = messages.some((m) => m.role === 'user');
+    if (activeSessionId === 'current' && hasUserMsg) {
+      const firstUserText = messages.find((m) => m.role === 'user')?.content || 'New Session';
+      const firstTitle = firstUserText.length > 25 ? firstUserText.slice(0, 25) + '...' : firstUserText;
+      
       const newSession: ChatSession = {
-        id: `session-${Date.now()}`,
+        id: 'session-' + Date.now(),
         title: firstTitle,
         timestamp: new Date().toISOString(),
         messages: [...messages]
@@ -187,9 +195,9 @@ export default function CopilotPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-12rem)] min-h-[500px]">
           {/* History Sidebar */}
-          <Card className="lg:col-span-1 flex flex-col overflow-hidden" padding="none">
+          <Card className="lg:col-span-1 flex flex-col overflow-hidden bg-surface-900 border border-white/5" padding="none">
             <div className="p-3 border-b border-white/5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-white flex items-center gap-1.5"><History className="w-4 h-4 text-slate-500" /> Chat Sessions</span>
+              <span className="text-xs font-bold text-white flex items-center gap-1.5 uppercase"><History className="w-4 h-4 text-slate-500" /> Chat Sessions</span>
               <Button size="sm" variant="ghost" onClick={handleNewSession} className="h-8 px-2 text-primary-400 hover:text-white" title="New Session">
                 <Plus className="w-4 h-4 mr-0.5" /> New
               </Button>
@@ -206,10 +214,10 @@ export default function CopilotPage() {
                 )}
               >
                 <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Current Active Session</span>
+                <span className="truncate font-semibold">Active Portal Session</span>
               </button>
 
-              <div className="pt-2 pb-1 px-3"><span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">History</span></div>
+              <div className="pt-2 pb-1 px-3"><span className="text-[9px] text-slate-500 uppercase font-bold tracking-wider">History Logs</span></div>
               
               {sessions.map((session) => (
                 <button
@@ -232,151 +240,249 @@ export default function CopilotPage() {
             </div>
           </Card>
 
-          {/* Active Chat Window */}
-          <Card className="lg:col-span-3 flex flex-col overflow-hidden" padding="none">
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto scrollbar-thin p-4 md:p-6 space-y-5">
-              <AnimatePresence>
-                {messages.map((msg) => (
-                  <motion.div
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={cn('flex gap-3.5', msg.role === 'user' ? 'flex-row-reverse' : '')}
-                  >
-                    <div className={cn(
-                      'w-8.5 h-8.5 rounded-lg flex items-center justify-center shrink-0 border',
-                      msg.role === 'user' ? 'bg-primary-500/10 border-primary-500/20' : 'bg-accent-cyan/10 border-accent-cyan/20'
-                    )}>
-                      {msg.role === 'user' ? <User className="w-4 h-4 text-primary-400" /> : <Bot className="w-4 h-4 text-accent-cyan" />}
-                    </div>
-
-                    <div className="max-w-[80%] space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-500 font-semibold uppercase">{msg.role === 'user' ? 'Operator' : 'Industria AI'}</span>
-                        <span className="text-[9px] text-slate-600">{new Date(msg.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      
+          {/* Active Chat Window & Parameters Grid */}
+          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden h-full">
+            {/* Chat viewport */}
+            <Card className="md:col-span-2 flex flex-col overflow-hidden bg-surface-900 border border-white/5" padding="none">
+              <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-5">
+                <AnimatePresence>
+                  {messages.map((msg) => (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={cn('flex gap-3.5', msg.role === 'user' ? 'flex-row-reverse' : '')}
+                    >
                       <div className={cn(
-                        'px-4 py-3 rounded-2xl text-xs md:text-sm leading-relaxed border',
-                        msg.role === 'user'
-                          ? 'bg-primary-600/20 border-primary-500/10 text-white rounded-tr-none'
-                          : 'bg-surface-850 border-white/5 text-slate-200 rounded-tl-none'
+                        'w-8.5 h-8.5 rounded-lg flex items-center justify-center shrink-0 border',
+                        msg.role === 'user' ? 'bg-primary-500/10 border-primary-500/20' : 'bg-accent-cyan/10 border-accent-cyan/20'
                       )}>
-                        {msg.content}
+                        {msg.role === 'user' ? <User className="w-4 h-4 text-primary-400" /> : <Bot className="w-4 h-4 text-accent-cyan" />}
                       </div>
 
-                      {/* Tool Actions for Assistant messages */}
-                      {msg.role === 'assistant' && (
-                        <div className="flex items-center gap-1.5 justify-start">
-                          <button
-                            onClick={() => copyToClipboard(msg.id, msg.content)}
-                            className="p-1.5 rounded bg-surface-850 hover:bg-surface-700 text-slate-500 hover:text-white transition-colors"
-                            title="Copy Response"
-                          >
-                            {copiedId === msg.id ? <Check className="w-3 h-3 text-accent-green" /> : <Copy className="w-3 h-3" />}
-                          </button>
-                          <button
-                            onClick={() => exportText(msg.id, msg.content)}
-                            className="p-1.5 rounded bg-surface-850 hover:bg-surface-700 text-slate-500 hover:text-white transition-colors"
-                            title="Download Response as Text"
-                          >
-                            <Download className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => speak(msg.id, msg.content)}
-                            className={cn(
-                              'p-1.5 rounded transition-colors',
-                              playingId === msg.id
-                                ? 'bg-primary-500/20 text-primary-300'
-                                : 'bg-surface-850 hover:bg-surface-700 text-slate-500 hover:text-white'
-                            )}
-                            title={playingId === msg.id ? "Stop Reading" : "Read Response Aloud"}
-                          >
-                            {playingId === msg.id ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
-                          </button>
+                      <div className="max-w-[80%] space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-500 font-semibold uppercase">{msg.role === 'user' ? 'Operator' : 'Industria AI'}</span>
+                          <span className="text-[9px] text-slate-600">{new Date(msg.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
-                      )}
+                        
+                        <div className={cn(
+                          'px-4 py-3 rounded-2xl text-xs md:text-sm leading-relaxed border',
+                          msg.role === 'user'
+                            ? 'bg-primary-600/20 border-primary-500/10 text-white rounded-tr-none'
+                            : 'bg-surface-850 border-white/5 text-slate-200 rounded-tl-none'
+                        )}>
+                          {msg.content}
+                        </div>
 
-                      {msg.sources && msg.sources.length > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-[10px] text-slate-500 flex items-center gap-1"><FileText className="w-3 h-3" /> Sources Cited</p>
-                          {msg.sources.map((s, i) => (
-                            <div key={i} className="text-[10px] px-2 py-0.5 rounded bg-surface-850 border border-white/5 text-slate-400 inline-block mr-1">
-                              {s.title}{s.page && ` — ${s.page}`}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {msg.confidence && msg.role === 'assistant' && (
-                        <Badge variant={msg.confidence > 85 ? 'success' : 'warning'} className="text-[9px] px-1 py-0.5">
-                          {msg.confidence}% confidence
-                        </Badge>
-                      )}
+                        {/* Tool Actions for Assistant messages */}
+                        {msg.role === 'assistant' && (
+                          <div className="flex items-center gap-1.5 justify-start">
+                            <button
+                              onClick={() => copyToClipboard(msg.id, msg.content)}
+                              className="p-1.5 rounded bg-surface-850 hover:bg-surface-700 text-slate-500 hover:text-white transition-colors cursor-pointer"
+                              title="Copy Response"
+                            >
+                              {copiedId === msg.id ? <Check className="w-3 h-3 text-accent-green" /> : <Copy className="w-3 h-3" />}
+                            </button>
+                            <button
+                              onClick={() => exportText(msg.id, msg.content)}
+                              className="p-1.5 rounded bg-surface-850 hover:bg-surface-700 text-slate-500 hover:text-white transition-colors cursor-pointer"
+                              title="Download Response as Text"
+                            >
+                              <Download className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => speak(msg.id, msg.content)}
+                              className={cn(
+                                'p-1.5 rounded transition-colors cursor-pointer',
+                                playingId === msg.id
+                                  ? 'bg-primary-500/20 text-primary-300'
+                                  : 'bg-surface-850 hover:bg-surface-700 text-slate-500 hover:text-white'
+                              )}
+                              title={playingId === msg.id ? "Stop Reading" : "Read Response Aloud"}
+                            >
+                              {playingId === msg.id ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        )}
 
-                      {msg.recommendations && (
-                        <div className="text-left bg-surface-850/50 p-2.5 rounded-xl border border-white/5">
-                          <p className="text-[10px] font-semibold text-accent-amber flex items-center gap-1 mb-1"><Sparkles className="w-3 h-3" /> Recommended Actions</p>
-                          <ul className="text-xs text-slate-400 space-y-0.5">
-                            {msg.recommendations.map((r, i) => <li key={i}>• {r}</li>)}
-                          </ul>
-                        </div>
-                      )}
+                        {msg.sources && msg.sources.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-slate-500 flex items-center gap-1"><FileText className="w-3 h-3" /> Sources Cited</p>
+                            {msg.sources.map((s, i) => (
+                              <div key={i} className="text-[10px] px-2 py-0.5 rounded bg-surface-850 border border-white/5 text-slate-400 inline-block mr-1 font-mono">
+                                {s.title}{s.page && ` — ${s.page}`}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {msg.confidence && msg.role === 'assistant' && (
+                          <Badge variant={msg.confidence > 85 ? 'success' : 'warning'} className="text-[9px] px-1 py-0.5">
+                            {msg.confidence}% confidence
+                          </Badge>
+                        )}
+
+                        {msg.recommendations && (
+                          <div className="text-left bg-surface-850/50 p-2.5 rounded-xl border border-white/5">
+                            <p className="text-[10px] font-semibold text-accent-amber flex items-center gap-1 mb-1"><Sparkles className="w-3 h-3" /> Recommended Actions</p>
+                            <ul className="text-xs text-slate-400 space-y-0.5">
+                              {msg.recommendations.map((r, i) => <li key={i}>• {r}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+
+                {chatMutation.isPending && (
+                  <div className="flex gap-3">
+                    <div className="w-8.5 h-8.5 rounded-lg bg-accent-cyan/10 border border-accent-cyan/20 flex items-center justify-center shrink-0">
+                      <Bot className="w-4 h-4 text-accent-cyan animate-pulse" />
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-
-              {chatMutation.isPending && (
-                <div className="flex gap-3">
-                  <div className="w-8.5 h-8.5 rounded-lg bg-accent-cyan/10 border border-accent-cyan/20 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-accent-cyan animate-pulse" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-[10px] text-slate-500 font-semibold uppercase">Industria AI</div>
-                    <div className="px-4 py-2.5 rounded-2xl bg-surface-850 border border-white/5 text-xs text-slate-400 flex items-center gap-2">
-                      <span className="flex gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </span>
-                      Analyzing plant knowledge base...
+                    <div className="space-y-2">
+                      <div className="text-[10px] text-slate-500 font-semibold uppercase">Industria AI</div>
+                      <div className="px-4 py-2.5 rounded-2xl bg-surface-850 border border-white/5 text-xs text-slate-400 flex items-center gap-2">
+                        <span className="flex gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </span>
+                        Analyzing plant knowledge base...
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-              <div ref={bottomRef} />
-            </div>
-
-            {/* Input Form & Suggestions */}
-            <div className="p-4 border-t border-white/5">
-              <div className="flex flex-wrap gap-2 mb-3">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => sendMessage(s)}
-                    disabled={chatMutation.isPending}
-                    className="text-[11px] px-3 py-1.5 rounded-full bg-surface-800 text-slate-400 hover:text-white hover:bg-surface-700 transition-colors border border-white/5"
-                  >
-                    {s}
-                  </button>
-                ))}
+                )}
+                <div ref={bottomRef} />
               </div>
-              <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex gap-2">
+
+              {/* Input Form & Suggestions */}
+              <div className="p-4 border-t border-white/5">
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {SUGGESTIONS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => sendMessage(s)}
+                      disabled={chatMutation.isPending}
+                      className="text-[11px] px-3 py-1.5 rounded-full bg-surface-800 text-slate-400 hover:text-white hover:bg-surface-700 transition-colors border border-white/5 cursor-pointer"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex gap-2">
+                  <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Ask about assets, maintenance, compliance, manuals..."
+                    className="input-field flex-1 !mb-0 text-sm"
+                    disabled={chatMutation.isPending}
+                  />
+                  <Button type="submit" disabled={!input.trim() || chatMutation.isPending} loading={chatMutation.isPending}>
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </form>
+              </div>
+            </Card>
+
+            {/* RAG Settings sidebar controls */}
+            <Card className="md:col-span-1 flex flex-col bg-surface-900 border border-white/5 p-4 space-y-4 text-xs overflow-y-auto scrollbar-thin">
+              <div className="border-b border-white/5 pb-2">
+                <h3 className="font-bold text-white flex items-center gap-1.5 uppercase"><Sliders className="w-4 h-4 text-primary-400" /> RAG Parameters</h3>
+                <p className="text-[10px] text-slate-500 mt-0.5">Fine-tune vector search and generation bounds</p>
+              </div>
+
+              {/* Model selector */}
+              <div className="space-y-1.5">
+                <label className="font-semibold text-slate-400">LLM Generation Model</label>
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="w-full bg-surface-850 border border-white/5 text-white rounded-lg p-2 text-xs focus:border-primary-500"
+                >
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro (Default)</option>
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                  <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                  <option value="gpt-4o">GPT-4o (Omni)</option>
+                </select>
+              </div>
+
+              {/* Temperature slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between">
+                  <label className="font-semibold text-slate-400">Temperature (Creativity)</label>
+                  <span className="font-mono text-white font-bold">{temperature}</span>
+                </div>
                 <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about assets, maintenance, compliance, manuals..."
-                  className="input-field flex-1 !mb-0 text-sm"
-                  disabled={chatMutation.isPending}
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={temperature}
+                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                  className="w-full accent-primary-500"
                 />
-                <Button type="submit" disabled={!input.trim() || chatMutation.isPending} loading={chatMutation.isPending}>
-                  <Send className="w-4 h-4" />
-                </Button>
-              </form>
-            </div>
-          </Card>
+              </div>
+
+              {/* Chunk Size slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between">
+                  <label className="font-semibold text-slate-400">Chunk Size (Tokens)</label>
+                  <span className="font-mono text-white font-bold">{chunkSize}</span>
+                </div>
+                <input
+                  type="range"
+                  min="256"
+                  max="2048"
+                  step="256"
+                  value={chunkSize}
+                  onChange={(e) => setChunkSize(parseInt(e.target.value))}
+                  className="w-full accent-primary-500"
+                />
+              </div>
+
+              {/* Source count input */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between">
+                  <label className="font-semibold text-slate-400">Max Sources Cited</label>
+                  <span className="font-mono text-white font-bold">{sourceCount}</span>
+                </div>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={sourceCount}
+                  onChange={(e) => setSourceCount(parseInt(e.target.value) || 4)}
+                  className="w-full bg-surface-850 border border-white/5 text-white rounded-lg p-2 text-xs focus:border-primary-500 font-mono"
+                />
+              </div>
+
+              {/* Advanced toggles */}
+              <div className="space-y-3 pt-2 border-t border-white/5">
+                <label className="flex items-center gap-2 text-slate-300 select-none cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableGraphReranking}
+                    onChange={(e) => setEnableGraphReranking(e.target.checked)}
+                    className="w-4 h-4 accent-primary-500"
+                  />
+                  <span>Enable Graph Reranking (Neo4j)</span>
+                </label>
+
+                <label className="flex items-center gap-2 text-slate-300 select-none cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={strictSafety}
+                    onChange={(e) => setStrictSafety(e.target.checked)}
+                    className="w-4 h-4 accent-primary-500"
+                  />
+                  <span>Strict Safety Guardrails</span>
+                </label>
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
     </PageTransition>

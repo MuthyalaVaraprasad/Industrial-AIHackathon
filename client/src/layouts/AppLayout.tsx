@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { Menu, Bell, Search, Play, CheckCircle, FileText, Activity, User, BookOpen, Shield, Folder, ArrowLeft, Loader2 } from 'lucide-react';
+import { Menu, Bell, Search, FileText, Activity, User, BookOpen, Shield, Folder, ArrowLeft, Loader2 } from 'lucide-react';
 import { Sidebar } from './Sidebar';
-import { useAuth } from '@/store/AuthContext';
 import { Badge } from '@/components/ui/Badge';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -65,6 +64,47 @@ function FloatingCrystalIndicator() {
   );
 }
 
+// Global ambient 3D floating nodes system for background of entire website
+function GlobalBackgroundNodes() {
+  const pointsRef = useRef<THREE.Points>(null);
+
+  useEffect(() => {
+    if (!pointsRef.current) return;
+    const geometry = pointsRef.current.geometry;
+    const positions = [];
+    const count = 200;
+    for (let i = 0; i < count; i++) {
+      positions.push(
+        (Math.random() - 0.5) * 12,
+        (Math.random() - 0.5) * 12,
+        (Math.random() - 0.5) * 12
+      );
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  }, []);
+
+  useFrame((state) => {
+    if (pointsRef.current) {
+      pointsRef.current.rotation.y = state.clock.getElapsedTime() * 0.015;
+      pointsRef.current.rotation.x = state.clock.getElapsedTime() * 0.008;
+    }
+  });
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry />
+      <pointsMaterial
+        color="#0891b2"
+        size={0.045}
+        transparent
+        opacity={0.2}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
+    </points>
+  );
+}
+
 interface NotificationItem {
   id: string;
   type: 'ocr' | 'ai_summary' | 'compliance' | 'maintenance' | 'report' | 'risk' | 'comment';
@@ -85,7 +125,6 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { isDemoMode } = useAuth();
   const navigate = useNavigate();
 
   // Search States
@@ -144,8 +183,7 @@ export function AppLayout() {
     }
   }, [searchQuery]);
 
-  // Demo Mode States
-  const [demoLoadedAlert, setDemoLoadedAlert] = useState(false);
+
 
   // Close search suggestions & notifications on click outside
   useEffect(() => {
@@ -229,27 +267,18 @@ export function AppLayout() {
     localStorage.setItem('industria_notifications', JSON.stringify(updated));
   };
 
-  // One-click Demo Mode loader
-  const handleAutoLoadDemo = () => {
-    // Write sample assets, docs, records directly into LocalStorage to populate components
-    localStorage.setItem('industria_demo_user', JSON.stringify({
-      displayName: 'Judge Explorer',
-      email: 'judge@industria.ai',
-      role: 'admin'
-    }));
-    localStorage.setItem('industria_role', 'admin');
-    
-    setDemoLoadedAlert(true);
-    setTimeout(() => {
-      setDemoLoadedAlert(false);
-      // Refresh current page to load all populated states immediately
-      navigate('/app/dashboard');
-      window.location.reload();
-    }, 1800);
-  };
+
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen relative overflow-hidden bg-[#070b13]">
+      {/* Global 3D Ambient Background Particle Matrix */}
+      <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
+        <Canvas camera={{ position: [0, 0, 6] }}>
+          <ambientLight intensity={0.4} />
+          <GlobalBackgroundNodes />
+        </Canvas>
+      </div>
+
       <Sidebar
         collapsed={collapsed}
         onToggle={() => setCollapsed(!collapsed)}
@@ -257,7 +286,7 @@ export function AppLayout() {
         onMobileClose={() => setMobileOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 z-10">
         <header className="sticky top-0 z-30 flex items-center justify-between px-4 md:px-6 py-3 bg-surface-900/80 backdrop-blur-xl border-b border-white/5 gap-4">
           <div className="flex items-center gap-3 shrink-0">
             <button
@@ -275,10 +304,6 @@ export function AppLayout() {
             >
               <ArrowLeft className="w-3.5 h-3.5 text-accent-cyan" /> Back
             </button>
-
-            {isDemoMode && (
-              <Badge variant="warning" className="hidden sm:inline-flex">Demo Mode</Badge>
-            )}
           </div>
 
           {/* Universal Smart Search Bar */}
@@ -385,14 +410,6 @@ export function AppLayout() {
               </Canvas>
             </div>
 
-            {/* One-click Interactive Demo Loader */}
-            <button
-              onClick={handleAutoLoadDemo}
-              className="px-3 py-1.5 rounded-lg bg-primary-500/10 hover:bg-primary-500/20 text-primary-300 hover:text-white border border-primary-500/20 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" /> Auto-Load Demo
-            </button>
-
             {/* Interactive Notification Center bell panel dropdown */}
             <div ref={notificationsContainerRef} className="relative">
               <button
@@ -448,13 +465,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        {/* Demo Mode Alert Banner overlay */}
-        {demoLoadedAlert && (
-          <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 p-4 rounded-xl border bg-accent-green/10 border-accent-green/20 text-accent-green flex items-center gap-2 shadow-2xl animate-bounce">
-            <CheckCircle className="w-5 h-5 shrink-0" />
-            <span className="text-xs font-semibold">Demo Mode Initialized! Loading assets, graph nodes, and RAG chats...</span>
-          </div>
-        )}
+
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
           <Outlet />

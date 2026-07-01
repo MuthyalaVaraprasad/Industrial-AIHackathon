@@ -3,7 +3,48 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Terminal, Activity, ArrowRight } from 'lucide-react';
 import * as THREE from 'three';
 
-// 3D Spinning Gyroscope / Gimbal assembly representing unified industrial systems
+// 3D Matrix Nodes animation matching sign-in matrix background
+function MatrixNodesPreloader() {
+  const pointsRef = useRef<THREE.Points>(null);
+
+  useEffect(() => {
+    if (!pointsRef.current) return;
+    const geometry = pointsRef.current.geometry;
+    const positions = [];
+    const count = 350;
+    for (let i = 0; i < count; i++) {
+      positions.push(
+        (Math.random() - 0.5) * 8,
+        (Math.random() - 0.5) * 8,
+        (Math.random() - 0.5) * 8
+      );
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  }, []);
+
+  useFrame((state) => {
+    if (pointsRef.current) {
+      pointsRef.current.rotation.y = state.clock.getElapsedTime() * 0.08;
+      pointsRef.current.rotation.x = state.clock.getElapsedTime() * 0.04;
+    }
+  });
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry />
+      <pointsMaterial
+        color="#06b6d4"
+        size={0.05}
+        transparent
+        opacity={0.5}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
+    </points>
+  );
+}
+
+// 3D Spinning Gyroscope Ring Assembly
 function GyroscopePreloader() {
   const outerRingRef = useRef<THREE.Mesh>(null);
   const midRingRef = useRef<THREE.Mesh>(null);
@@ -110,11 +151,12 @@ export function PreloaderScreen({ onEnter }: { onEnter: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-[#070b13] flex flex-col items-center justify-center overflow-hidden">
-      {/* 3D Gyroscope Canvas */}
+      {/* 3D Gyroscope Canvas with Ambient Matrix Particles */}
       <div className="absolute inset-0 z-0 opacity-60">
         <Canvas camera={{ position: [0, 0, 4] }}>
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} intensity={1.5} color="#22d3ee" />
+          <MatrixNodesPreloader />
           <GyroscopePreloader />
         </Canvas>
       </div>
@@ -167,10 +209,6 @@ export function PreloaderScreen({ onEnter }: { onEnter: () => void }) {
             </div>
           </div>
         )}
-      </div>
-
-      <div className="absolute bottom-6 text-[10px] text-slate-600 font-mono tracking-widest">
-        INDUSTRIA OPERATIONS BRAIN • PHASE 2
       </div>
     </div>
   );

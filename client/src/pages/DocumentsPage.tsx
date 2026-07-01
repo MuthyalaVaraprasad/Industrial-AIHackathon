@@ -4,7 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
 import {
   Upload, FileText, Image, FileSpreadsheet, File, Trash2,
-  Eye, RefreshCw, Search, Filter, Download, History, AlertTriangle
+  Eye, RefreshCw, Search, Download, History, AlertTriangle, CheckSquare, Square
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { documentsApi } from '@/services/api';
@@ -13,9 +13,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
-import { StatCard } from '@/components/common/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonCard } from '@/components/ui/Loading';
 import { formatBytes, getDocumentType } from '@/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -46,8 +44,12 @@ const typeIcons: Record<string, React.ReactNode> = {
   other: <File className="w-5 h-5 text-slate-400" />,
 };
 
+const TAG_FILTERS = ['All', 'Manual', 'Drawing', 'Audit', 'Telemetry'];
+
 export default function DocumentsPage() {
   const [search, setSearch] = useState('');
+  const [selectedTag, setSelectedTag] = useState('All');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [duplicateNotice, setDuplicateNotice] = useState<string | null>(null);
@@ -69,12 +71,18 @@ export default function DocumentsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: documentsApi.delete,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documents'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setSelectedIds([]);
+    },
   });
 
   const reprocessMutation = useMutation({
     mutationFn: documentsApi.reprocess,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documents'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setSelectedIds([]);
+    },
   });
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -98,105 +106,104 @@ export default function DocumentsPage() {
         setUploadProgress((prev) => ({ ...prev, [fileName]: progress }));
       });
       queryClient.invalidateQueries({ queryKey: ['documents'] });
+    } catch {
+      // handled inside API client
     } finally {
       setIsUploading(false);
-      setUploadProgress({});
+      setTimeout(() => setUploadProgress({}), 2000);
     }
-  }, [queryClient, documentsQuery.data]);
+  }, [documentsQuery.data, queryClient]);
 
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: ACCEPTED_TYPES,
-    multiple: true,
     disabled: isUploading,
-    noClick: true,
   });
 
-  const documents = documentsQuery.data?.items ?? [];
-  const filtered = documents.filter((d) =>
-    d.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const stats = {
-    total: documents.length,
-    processed: documents.filter((d) => d.status === 'completed').length,
-    entities: documents.reduce((sum, d) => sum + d.entities.length, 0),
-    categories: new Set(documents.map((d) => d.metadata.category).filter(Boolean)).size,
-  };
-
   const handleExportMetadata = () => {
-    const metadataList = documents.map(d => ({
-      id: d.id,
-      name: d.name,
-      type: d.type,
-      size: d.size,
-      uploadedAt: d.uploadedAt,
-      metadata: d.metadata,
-      entitiesCount: d.entities.length,
-      confidenceScore: d.confidenceScore
-    }));
-    
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(metadataList, null, 2))}`;
+    if (!documentsQuery.data) return;
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(documentsQuery.data.items, null, 2)
+    )}`;
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', jsonString);
-    downloadAnchor.setAttribute('download', 'industria_document_metadata.json');
+    downloadAnchor.setAttribute('download', 'industria_documents_metadata.json');
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
   };
 
-  if (documentsQuery.isError) {
-    return (
-      <PageTransition>
-        <ErrorState onRetry={() => documentsQuery.refetch()} />
-      </PageTransition>
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
-  }
+  };
+
+  const toggleSelectAll = (filteredItems: DocumentRecord[]) => {
+    if (selectedIds.length === filteredItems.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredItems.map(d => d.id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (window.confirm(`Are you sure you want to delete the ${selectedIds.length} selected documents?`)) {
+      selectedIds.forEach(id => deleteMutation.mutate(id));
+    }
+  };
+
+  const handleBulkReprocess = () => {
+    selectedIds.forEach(id => reprocessMutation.mutate(id));
+  };
+
+  const items = documentsQuery.data?.items ?? [];
+
+  const filtered = items.filter((doc) => {
+    const matchesSearch = doc.name.toLowerCase().includes(search.toLowerCase()) ||
+      (doc.metadata.category && doc.metadata.category.toLowerCase().includes(search.toLowerCase()));
+    
+    const matchesTag = selectedTag === 'All' || 
+      (doc.metadata.category && doc.metadata.category.toLowerCase() === selectedTag.toLowerCase());
+
+    return matchesSearch && matchesTag;
+  });
 
   return (
     <PageTransition>
-      <div className="space-y-6">
-        <div>
-          <h1 className="page-title">Document Intelligence Center</h1>
-          <p className="page-subtitle">Upload, process, and extract intelligence from industrial documents</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard label="Total Documents" value={stats.total} icon={<FileText className="w-5 h-5" />} color="cyan" />
-          <StatCard label="Processed" value={stats.processed} icon={<RefreshCw className="w-5 h-5" />} color="green" />
-          <StatCard label="Entities Extracted" value={stats.entities} icon={<Filter className="w-5 h-5" />} color="purple" />
-          <StatCard label="Categories" value={stats.categories} icon={<FileSpreadsheet className="w-5 h-5" />} color="primary" />
-        </div>
-
-        {/* Duplicate alert banner */}
-        {duplicateNotice && (
-          <div className="p-4 rounded-xl text-sm border bg-accent-amber/10 border-accent-amber/20 text-accent-amber flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>{duplicateNotice}</span>
+      <div className="space-y-6 max-w-5xl mx-auto">
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <div>
+            <h1 className="page-title">Document Intelligence Center</h1>
+            <p className="page-subtitle">Upload plant schemas, compliance reports, and manuals to process via RAG & OCR pipelines</p>
           </div>
-        )}
+          <Button variant="secondary" size="sm" onClick={handleExportMetadata} className="text-xs">
+            <Download className="w-4 h-4 mr-1" /> Export Metadata JSON
+          </Button>
+        </div>
 
-        <Card
-          {...getRootProps()}
-          onClick={open}
-          className={`border-2 border-dashed cursor-pointer transition-all duration-300 ${
-            isDragActive
-              ? 'border-primary-500 bg-primary-500/5'
-              : 'border-white/10 hover:border-primary-500/30 hover:bg-white/[0.02]'
-          } ${isUploading ? 'pointer-events-none opacity-70' : ''}`}
-        >
-          <input {...getInputProps()} aria-label="Upload documents" />
-          <div className="flex flex-col items-center py-10 px-4 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary-500/10 flex items-center justify-center mb-4">
-              <Upload className={`w-8 h-8 text-primary-400 ${isDragActive ? 'animate-bounce' : ''}`} />
+        {/* Dropzone Upload Component */}
+        <Card className="p-0 overflow-hidden bg-surface-900 border border-white/5 relative">
+          {duplicateNotice && (
+            <div className="bg-accent-cyan/10 border-b border-accent-cyan/20 p-3 text-xs text-accent-cyan flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{duplicateNotice}</span>
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">
-              {isDragActive ? 'Drop files here' : 'Drag & drop files to upload'}
-            </h3>
-            <p className="text-slate-400 text-sm mb-4">
-              Supports PDF, DOCX, XLSX, and images. Bulk upload enabled.
-            </p>
-            <Button variant="secondary" size="sm" type="button" onClick={(e) => { e.stopPropagation(); open(); }}>
+          )}
+
+          <div
+            {...getRootProps()}
+            className={`p-8 border-2 border-dashed rounded-2xl text-center cursor-pointer transition-all duration-300 ${
+              isDragActive
+                ? 'border-primary-500 bg-primary-500/10'
+                : 'border-white/5 hover:border-primary-500/20 bg-surface-850/50'
+            } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <input {...getInputProps()} />
+            <Upload className="w-10 h-10 text-slate-500 mx-auto mb-4 animate-bounce" />
+            <p className="text-sm font-semibold text-white">Drag & drop files here, or click to upload</p>
+            <p className="text-xs text-slate-500 mt-2">Supports PDF, DOCX, XLSX, PNG, JPG, and TIFF (Max 25MB)</p>
+            <Button variant="secondary" size="sm" className="mt-4 pointer-events-none text-xs">
               Browse Files
             </Button>
           </div>
@@ -226,24 +233,56 @@ export default function DocumentsPage() {
           </AnimatePresence>
         </Card>
 
-        {/* Toolbar: Search, Filters & Export */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
+        {/* Filters pills row */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none shrink-0">
+          {TAG_FILTERS.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => { setSelectedTag(tag); setSelectedIds([]); }}
+              className={`px-3 py-1 rounded-full text-xs whitespace-nowrap cursor-pointer transition-colors ${
+                selectedTag === tag
+                  ? 'bg-primary-500 text-white font-bold'
+                  : 'bg-surface-800 hover:bg-surface-700 text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              {tag}s
+            </button>
+          ))}
+        </div>
+
+        {/* Toolbar: Search, Filters & Bulk Actions */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center bg-surface-900/60 p-4 rounded-xl border border-white/5">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <Input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search documents..."
-              className="pl-10 !mb-0"
+              onChange={(e) => { setSearch(e.target.value); setSelectedIds([]); }}
+              placeholder="Search documents by name or category..."
+              className="pl-10 !mb-0 text-xs"
             />
           </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={handleExportMetadata}>
-              <Download className="w-4 h-4" /> Export Metadata (JSON)
-            </Button>
-          </div>
+
+          {/* Bulk operations actions */}
+          {selectedIds.length > 0 && (
+            <div className="flex gap-2 items-center">
+              <span className="text-xs text-slate-400 font-semibold">{selectedIds.length} Selected</span>
+              <button
+                onClick={handleBulkReprocess}
+                className="px-3 py-1.5 rounded bg-accent-amber/20 hover:bg-accent-amber/30 text-accent-amber text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Reprocess
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="px-3 py-1.5 rounded bg-accent-red/20 hover:bg-accent-red/30 text-accent-red text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete
+              </button>
+            </div>
+          )}
         </div>
 
+        {/* Documents list table */}
         {documentsQuery.isLoading ? (
           <div className="grid gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -253,15 +292,32 @@ export default function DocumentsPage() {
         ) : filtered.length === 0 ? (
           <EmptyState
             title={search ? 'No documents found' : 'No documents yet'}
-            description={search ? 'Try a different search term' : 'Upload your first document to get started with AI-powered extraction'}
+            description={search ? 'Try a different search term or select another category' : 'Upload your first document to get started with AI-powered extraction'}
             actionLabel={search ? undefined : 'Upload is available above'}
           />
         ) : (
           <div className="space-y-3">
+            {/* Select all bar */}
+            <div className="flex items-center gap-3 px-4 py-1.5 bg-surface-900/40 rounded-lg border border-white/5 text-xs text-slate-400">
+              <button
+                onClick={() => toggleSelectAll(filtered)}
+                className="hover:text-white flex items-center gap-1.5 font-semibold cursor-pointer"
+              >
+                {selectedIds.length === filtered.length ? (
+                  <CheckSquare className="w-4 h-4 text-primary-400" />
+                ) : (
+                  <Square className="w-4 h-4" />
+                )}
+                Select All ({filtered.length})
+              </button>
+            </div>
+
             {filtered.map((doc) => (
               <div key={doc.id} className="space-y-2">
                 <DocumentRow
                   doc={doc}
+                  isSelected={selectedIds.includes(doc.id)}
+                  onSelectToggle={() => toggleSelect(doc.id)}
                   onView={() => navigate(`/app/processing/${doc.id}`)}
                   onDelete={() => deleteMutation.mutate(doc.id)}
                   onReprocess={() => reprocessMutation.mutate(doc.id)}
@@ -269,7 +325,7 @@ export default function DocumentsPage() {
                   onToggleVersions={() => setShowVersions(showVersions === doc.id ? null : doc.id)}
                 />
                 
-                {/* Mock version history panel */}
+                {/* Version history panel */}
                 {showVersions === doc.id && (
                   <div className="mx-6 p-4 rounded-xl bg-surface-850 border border-white/5 space-y-3 text-xs">
                     <h4 className="font-semibold text-white flex items-center gap-1.5"><History className="w-3.5 h-3.5" /> File Version History</h4>
@@ -296,6 +352,8 @@ export default function DocumentsPage() {
 
 function DocumentRow({
   doc,
+  isSelected,
+  onSelectToggle,
   onView,
   onDelete,
   onReprocess,
@@ -303,6 +361,8 @@ function DocumentRow({
   onToggleVersions,
 }: {
   doc: DocumentRecord;
+  isSelected: boolean;
+  onSelectToggle: () => void;
   onView: () => void;
   onDelete: () => void;
   onReprocess: () => void;
@@ -312,15 +372,27 @@ function DocumentRow({
   const docType = doc.type || getDocumentType(doc.name);
 
   return (
-    <Card hover padding="sm" className="flex flex-col sm:flex-row sm:items-center gap-4">
+    <Card hover padding="sm" className="flex flex-col sm:flex-row sm:items-center gap-4 relative overflow-hidden">
       <div className="flex items-center gap-4 flex-1 min-w-0">
+        {/* Checkbox selector */}
+        <button
+          onClick={onSelectToggle}
+          className="text-slate-500 hover:text-white shrink-0 cursor-pointer"
+        >
+          {isSelected ? (
+            <CheckSquare className="w-4 h-4 text-primary-400" />
+          ) : (
+            <Square className="w-4 h-4" />
+          )}
+        </button>
+
         <div className="w-10 h-10 rounded-lg bg-surface-600/50 flex items-center justify-center shrink-0">
           {typeIcons[docType]}
         </div>
+        
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="font-medium text-white truncate">{doc.name}</p>
-            {/* Version Badge trigger */}
             <button
               onClick={onToggleVersions}
               className="px-1.5 py-0.5 rounded bg-surface-700 hover:bg-primary-500/20 hover:text-primary-300 text-[9px] text-slate-400 font-semibold flex items-center gap-0.5 cursor-pointer"
@@ -345,7 +417,7 @@ function DocumentRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 sm:shrink-0">
+      <div className="flex items-center gap-3 sm:shrink-0 pl-8 sm:pl-0">
         {doc.status !== 'completed' && doc.status !== 'failed' && (
           <div className="flex-1 sm:w-24">
             <div className="h-1.5 rounded-full bg-surface-600 overflow-hidden">

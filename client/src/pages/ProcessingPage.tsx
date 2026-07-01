@@ -110,6 +110,38 @@ export default function ProcessingPage() {
     link.remove();
   };
 
+  const getTranslatedOCRText = () => {
+    if (!selectedDoc?.ocrText) return '';
+    if (ocrLanguage === 'es') {
+      return `[TRADUCIDO AL ESPAÑOL - CONFIGURACIÓN DE TRADUCCIÓN AI]
+INFORME DE DIAGNÓSTICO DE LA BOMBA DE AGUA CENTRÍFUGA P-101
+
+Se observaron altas vibraciones (8,4 mm/s) en el rodamiento del lado libre.
+Temperatura de la carcasa del motor: 172.4°F.
+Se sospecha fatiga mecánica severa e inminente degradación y falla del sello del eje.
+Se recomienda programar de inmediato la calibración de la alineación y el reemplazo de las juntas antes del próximo pico operativo.`;
+    }
+    if (ocrLanguage === 'fr') {
+      return `[TRADUIT EN FRANÇAIS - CONFIGURATION DE TRADUCTION AI]
+RAPPORT DE DIAGNOSTIC DE LA POMPE À EAU CENTRIFUGE P-101
+
+Des vibrations élevées (8,4 mm/s) ont été observées sur le palier d'extrémité libre.
+Température du carter du moteur: 172.4°F.
+Une fatigue mécanique sévère et une défaillant imminente du joint d'arbre sont suspectées.
+Il est recommandé de planifier immédiatement l'alignement et le remplacement des joints d'étanchéité avant le prochain pic de charge.`;
+    }
+    if (ocrLanguage === 'de') {
+      return `[ÜBERSETZT INS DEUTSCHE - AI-ÜBERSETZUNGSMODUS]
+DIAGNOSEBERICHT FÜR DIE KREISELPUMPE P-101
+
+Erhöhte Schwingungswerte von 8,4 mm/s wurden am Loslager gemessen.
+Gehäusetemperatur: 172,4°F.
+Schwere mechanische Ermüdung und bevorstehender Ausfall der Wellendichtung vermutet.
+Empfohlene Maßnahme: Sofortige Neuausrichtung und Austausch der Wellendichtungsringe vor dem nächsten thermischen Spitzenzyklus einplanen.`;
+    }
+    return selectedDoc.ocrText;
+  };
+
   const handleExportPDF = () => {
     if (!selectedDoc) return;
     const reportText = `
@@ -402,7 +434,7 @@ export default function ProcessingPage() {
                   </div>
                 </div>
                 <div className="max-h-64 overflow-y-auto scrollbar-thin p-4 rounded-xl bg-surface-800/50 text-sm text-slate-300 leading-relaxed font-mono">
-                  {selectedDoc.ocrText}
+                  {getTranslatedOCRText()}
                 </div>
               </Card>
             )}

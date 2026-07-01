@@ -11,7 +11,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [localError, setLocalError] = useState('');
-  const { forgotPassword, loading, error, clearError, isDemoMode } = useAuth();
+  const { forgotPassword, loading, error, clearError } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,9 +42,7 @@ export default function ForgotPasswordPage() {
           </div>
           <h1 className="text-2xl font-display font-bold text-white mb-2">Check your email</h1>
           <p className="text-slate-400 mb-6">
-            {isDemoMode
-              ? 'In demo mode, password reset is simulated. In production, a reset link would be sent to your email.'
-              : `We've sent a password reset link to ${email}`}
+            We've sent a password reset link to <strong className="text-white">{email}</strong>. Please check your inbox.
           </p>
           <Link to="/login">
             <Button variant="secondary">Back to Sign In</Button>

@@ -23,7 +23,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('engineer');
   const [localError, setLocalError] = useState('');
-  const { signup, loginWithGoogle, loading, error, clearError, isDemoMode } = useAuth();
+  const { signup, loginWithGoogle, loading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
   const getPasswordStrength = (pwd: string) => {
@@ -88,11 +88,6 @@ export default function SignupPage() {
         <div className="mb-8">
           <h1 className="text-2xl font-display font-bold text-white mb-2">Create account</h1>
           <p className="text-slate-400">Start your industrial AI journey</p>
-          {isDemoMode && (
-            <p className="mt-3 text-sm text-accent-amber bg-accent-amber/10 border border-accent-amber/20 rounded-lg px-3 py-2">
-              Demo mode: account creation works without Firebase
-            </p>
-          )}
         </div>
 
         {displayError && (
