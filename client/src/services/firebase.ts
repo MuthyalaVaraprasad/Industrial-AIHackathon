@@ -1,46 +1,55 @@
-import { initializeApp, type FirebaseApp } from 'firebase/app';
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  sendPasswordResetEmail,
-  signInWithPopup,
-  GoogleAuthProvider,
-  updateProfile,
-  onAuthStateChanged,
-  type User as FirebaseUser,
-} from 'firebase/auth';
 import type { User, UserRole } from '@/types';
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+// Read configuration
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
+
+// Client-side local storage keys
+const USERS_DB_KEY = 'industria_users_database';
+const ACTIVE_USER_KEY = 'industria_active_user';
+
+// Mock/Initial User
+const DEFAULT_USER: User = {
+  uid: 'demo-user-1',
+  email: 'operator@industria.ai',
+  displayName: 'Marcus Vance',
+  role: 'admin',
+  createdAt: new Date().toISOString(),
 };
 
-const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' ||
-  !import.meta.env.VITE_FIREBASE_API_KEY ||
-  import.meta.env.VITE_FIREBASE_API_KEY === 'your_api_key';
-
-let app: FirebaseApp | null = null;
-
-function getFirebaseApp(): FirebaseApp | null {
-  if (isDemoMode) return null;
-  if (!app) {
-    app = initializeApp(firebaseConfig);
+// Retrieve all local registered users
+function getUsersDatabase(): Record<string, any> {
+  const stored = localStorage.getItem(USERS_DB_KEY);
+  if (!stored) {
+    // Seed default credentials
+    const initial = {
+      'operator@industria.ai': {
+        email: 'operator@industria.ai',
+        password: 'password',
+        displayName: 'Marcus Vance',
+        role: 'admin',
+      }
+    };
+    localStorage.setItem(USERS_DB_KEY, JSON.stringify(initial));
+    return initial;
   }
-  return app;
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return {};
+  }
 }
 
-const DEMO_USER_KEY = 'industria_demo_user';
-
-function getDemoUser(): User | null {
-  const stored = localStorage.getItem(DEMO_USER_KEY);
-  if (!stored) return null;
+// Retrieve currently active logged-in user
+function getActiveUser(): User | null {
+  const stored = localStorage.getItem(ACTIVE_USER_KEY);
+  if (!stored) {
+    // For demo/fallback ease, if in demo mode and nothing active, seed default
+    if (isDemoMode) {
+      localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(DEFAULT_USER));
+      return DEFAULT_USER;
+    }
+    return null;
+  }
   try {
     return JSON.parse(stored) as User;
   } catch {
@@ -48,179 +57,199 @@ function getDemoUser(): User | null {
   }
 }
 
-function setDemoUser(user: User | null): void {
+function setActiveUser(user: User | null): void {
   if (user) {
-    localStorage.setItem(DEMO_USER_KEY, JSON.stringify(user));
+    localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(user));
   } else {
-    localStorage.removeItem(DEMO_USER_KEY);
+    localStorage.removeItem(ACTIVE_USER_KEY);
   }
-}
-
-function mapFirebaseUser(fbUser: FirebaseUser, role?: UserRole): User {
-  const savedRole = (localStorage.getItem('industria_role') as UserRole) || role || 'engineer';
-  return {
-    uid: fbUser.uid,
-    email: fbUser.email ?? '',
-    displayName: fbUser.displayName ?? fbUser.email?.split('@')[0] ?? 'User',
-    photoURL: fbUser.photoURL ?? undefined,
-    role: savedRole,
-    createdAt: fbUser.metadata.creationTime ?? new Date().toISOString(),
-  };
 }
 
 export const authService = {
   isDemoMode,
 
   async login(email: string, password: string, role?: UserRole): Promise<User> {
-    if (role) {
-      localStorage.setItem('industria_role', role);
-    }
-    if (isDemoMode) {
-      await delay(800);
-      const chosenRole = role || (email.includes('admin') ? 'admin' : 'engineer');
-      const user: User = {
-        uid: 'demo-user-1',
-        email,
-        displayName: email.split('@')[0],
-        role: chosenRole,
-        createdAt: new Date().toISOString(),
-      };
-      setDemoUser(user);
-      return user;
+    await delay(600);
+    const db = getUsersDatabase();
+    const userRecord = db[email.toLowerCase()];
+    if (!userRecord || userRecord.password !== password) {
+      throw new Error('Invalid email or password credentials');
     }
 
-    const auth = getAuth(getFirebaseApp()!);
-    const credential = await signInWithEmailAndPassword(auth, email, password);
-    const token = await credential.user.getIdToken();
-    localStorage.setItem('industria_token', token);
-    return mapFirebaseUser(credential.user, role);
+    const activeRole = role || userRecord.role || 'engineer';
+    localStorage.setItem('industria_role', activeRole);
+    
+    const user: User = {
+      uid: `u-${email.split('@')[0]}`,
+      email: userRecord.email,
+      displayName: userRecord.displayName,
+      role: activeRole,
+      createdAt: new Date().toISOString(),
+    };
+
+    setActiveUser(user);
+    return user;
   },
 
   async signup(email: string, password: string, displayName: string, role?: UserRole): Promise<User> {
-    if (role) {
-      localStorage.setItem('industria_role', role);
-    }
-    if (isDemoMode) {
-      await delay(800);
-      const user: User = {
-        uid: `demo-${Date.now()}`,
-        email,
-        displayName,
-        role: role || 'engineer',
-        createdAt: new Date().toISOString(),
-      };
-      setDemoUser(user);
-      return user;
+    await delay(700);
+    const db = getUsersDatabase();
+    if (db[email.toLowerCase()]) {
+      throw new Error('Email address already registered');
     }
 
-    const auth = getAuth(getFirebaseApp()!);
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(credential.user, { displayName });
-    const token = await credential.user.getIdToken();
-    localStorage.setItem('industria_token', token);
-    return mapFirebaseUser(credential.user, role);
+    const activeRole = role || 'engineer';
+    db[email.toLowerCase()] = {
+      email: email.toLowerCase(),
+      password,
+      displayName,
+      role: activeRole,
+    };
+    localStorage.setItem(USERS_DB_KEY, JSON.stringify(db));
+    localStorage.setItem('industria_role', activeRole);
+
+    const user: User = {
+      uid: `u-${email.split('@')[0]}`,
+      email,
+      displayName,
+      role: activeRole,
+      createdAt: new Date().toISOString(),
+    };
+
+    setActiveUser(user);
+    return user;
   },
 
   async loginWithGoogle(role?: UserRole): Promise<User> {
-    if (role) {
-      localStorage.setItem('industria_role', role);
-    }
-    if (isDemoMode) {
-      await delay(800);
-      const user: User = {
-        uid: 'demo-google-user',
-        email: 'demo@gmail.com',
-        displayName: 'Demo User',
-        photoURL: 'https://ui-avatars.com/api/?name=Demo+User&background=6366f1&color=fff',
-        role: role || 'manager',
+    const googleClientId = '20722063480-rnnik1ric1plf4l93307ekfn1rg62e53.apps.googleusercontent.com';
+
+    // Verify GIS script is loaded in browser
+    const win = window as any;
+    if (!win.google || !win.google.accounts || !win.google.accounts.oauth2) {
+      // Fallback popup simulated login if google script is offline/blocked
+      console.warn('Google Identity Services client library is not loaded. Falling back to simulation.');
+      await delay(1000);
+      const mockUser: User = {
+        uid: 'g-google-id-mock',
+        email: 'operator@gmail.com',
+        displayName: 'Google Operator',
+        photoURL: 'https://ui-avatars.com/api/?name=Google+Operator&background=6366f1&color=fff',
+        role: role || 'admin',
         createdAt: new Date().toISOString(),
       };
-      setDemoUser(user);
-      return user;
+      setActiveUser(mockUser);
+      localStorage.setItem('industria_role', role || 'admin');
+      return mockUser;
     }
 
-    const auth = getAuth(getFirebaseApp()!);
-    const provider = new GoogleAuthProvider();
-    const credential = await signInWithPopup(auth, provider);
-    const token = await credential.user.getIdToken();
-    localStorage.setItem('industria_token', token);
-    return mapFirebaseUser(credential.user, role);
+    // Trigger google OAuth access token client popup flow natively
+    return new Promise<User>((resolve, reject) => {
+      try {
+        const client = win.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'email profile openid',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              try {
+                // Fetch profile using standard Google OAuth userinfo endpoint
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                });
+                const profile = await res.json();
+                
+                const activeRole = role || (localStorage.getItem('industria_role') as UserRole) || 'engineer';
+                localStorage.setItem('industria_role', activeRole);
+
+                const user: User = {
+                  uid: profile.sub || `g-${Date.now()}`,
+                  email: profile.email || 'user@gmail.com',
+                  displayName: profile.name || 'Google User',
+                  photoURL: profile.picture || undefined,
+                  role: activeRole,
+                  createdAt: new Date().toISOString(),
+                };
+
+                localStorage.setItem('industria_token', tokenResponse.access_token);
+                setActiveUser(user);
+                resolve(user);
+              } catch (fetchErr) {
+                reject(new Error('Failed to retrieve user profile from Google.'));
+              }
+            } else {
+              reject(new Error('Google sign-in popup authorization denied.'));
+            }
+          },
+          error_callback: (err: any) => {
+            reject(err);
+          }
+        });
+
+        client.requestAccessToken();
+      } catch (err) {
+        reject(err);
+      }
+    });
   },
 
   async forgotPassword(email: string): Promise<void> {
-    if (isDemoMode) {
-      await delay(600);
-      return;
+    await delay(500);
+    const db = getUsersDatabase();
+    if (!db[email.toLowerCase()]) {
+      throw new Error('Email address not registered in system ledger');
     }
-    const auth = getAuth(getFirebaseApp()!);
-    await sendPasswordResetEmail(auth, email);
   },
 
   async logout(): Promise<void> {
-    if (isDemoMode) {
-      setDemoUser(null);
-      localStorage.removeItem('industria_role');
-      return;
-    }
     localStorage.removeItem('industria_token');
     localStorage.removeItem('industria_role');
-    const auth = getAuth(getFirebaseApp()!);
-    await signOut(auth);
+    setActiveUser(null);
   },
 
   async updateUserProfile(profile: Partial<User>): Promise<User> {
-    if (isDemoMode) {
-      await delay(500);
-      const current = getDemoUser();
-      if (!current) throw new Error('Not logged in');
-      const updated = { ...current, ...profile };
-      if (profile.role) {
-        localStorage.setItem('industria_role', profile.role);
+    await delay(400);
+    const current = getActiveUser();
+    if (!current) throw new Error('No user is currently authenticated');
+    
+    const updated = { ...current, ...profile };
+    setActiveUser(updated);
+
+    // Save in user database as well
+    if (updated.email) {
+      const db = getUsersDatabase();
+      const dbRecord = db[updated.email.toLowerCase()];
+      if (dbRecord) {
+        if (profile.displayName) dbRecord.displayName = profile.displayName;
+        if (profile.role) dbRecord.role = profile.role;
+        localStorage.setItem(USERS_DB_KEY, JSON.stringify(db));
       }
-      setDemoUser(updated);
-      // Dispatch a custom event to notify listeners (since onAuthChange in demo mode relies on local storage events)
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: DEMO_USER_KEY,
-        newValue: JSON.stringify(updated)
-      }));
-      return updated;
     }
-    const auth = getAuth(getFirebaseApp()!);
-    const user = auth.currentUser;
-    if (!user) throw new Error('Not logged in');
-    if (profile.displayName) {
-      await updateProfile(user, { displayName: profile.displayName });
-    }
+
     if (profile.role) {
       localStorage.setItem('industria_role', profile.role);
     }
-    const updated = mapFirebaseUser(user, profile.role);
+
+    // Trigger local storage changes event to update layout context listeners
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: ACTIVE_USER_KEY,
+      newValue: JSON.stringify(updated)
+    }));
+
     return updated;
   },
 
   onAuthChange(callback: (user: User | null) => void): () => void {
-    if (isDemoMode) {
-      callback(getDemoUser());
-      const handler = (e: StorageEvent) => {
-        if (e.key === DEMO_USER_KEY) {
-          callback(getDemoUser());
-        }
-      };
-      window.addEventListener('storage', handler);
-      return () => window.removeEventListener('storage', handler);
-    }
-
-    const auth = getAuth(getFirebaseApp()!);
-    return onAuthStateChanged(auth, (fbUser) => {
-      callback(fbUser ? mapFirebaseUser(fbUser) : null);
-    });
+    callback(getActiveUser());
+    const handler = (e: StorageEvent) => {
+      if (e.key === ACTIVE_USER_KEY) {
+        callback(getActiveUser());
+      }
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
   },
 
   getCurrentUser(): User | null {
-    if (isDemoMode) return getDemoUser();
-    const auth = getAuth(getFirebaseApp()!);
-    const fbUser = auth.currentUser;
-    return fbUser ? mapFirebaseUser(fbUser) : null;
+    return getActiveUser();
   },
 };
 
