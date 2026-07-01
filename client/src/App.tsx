@@ -18,6 +18,8 @@ const EnergyCarbonPage = lazy(() => import('@/pages/EnergyCarbonPage'));
 const MaintenanceDispatchPage = lazy(() => import('@/pages/MaintenanceDispatchPage'));
 const DocumentOcrPipelinePage = lazy(() => import('@/pages/DocumentOcrPipelinePage'));
 const AiPlatformDiagnosticsPage = lazy(() => import('@/pages/AiPlatformDiagnosticsPage'));
+const ArchitectureVisualizerPage = lazy(() => import('@/pages/ArchitectureVisualizerPage'));
+const SearchBenchmarkPage = lazy(() => import('@/pages/SearchBenchmarkPage'));
 const IndustrialIntelligencePage = lazy(() => import('@/pages/IndustrialIntelligencePage'));
 const DecisionIntelligencePage = lazy(() => import('@/pages/DecisionIntelligencePage'));
 const ControlCenterPage = lazy(() => import('@/pages/ControlCenterPage'));
@@ -89,6 +91,8 @@ export default function App() {
               <Route path="maintenance-dispatch" element={<LazyPage><MaintenanceDispatchPage /></LazyPage>} />
               <Route path="document-ocr-pipeline" element={<LazyPage><DocumentOcrPipelinePage /></LazyPage>} />
               <Route path="ai-platform-diagnostics" element={<LazyPage><AiPlatformDiagnosticsPage /></LazyPage>} />
+              <Route path="architecture-visualizer" element={<LazyPage><ArchitectureVisualizerPage /></LazyPage>} />
+              <Route path="search-benchmark" element={<LazyPage><SearchBenchmarkPage /></LazyPage>} />
               <Route path="industrial-intelligence" element={<LazyPage><IndustrialIntelligencePage /></LazyPage>} />
               <Route path="decision-intelligence" element={<LazyPage><DecisionIntelligencePage /></LazyPage>} />
               <Route path="control-center" element={<LazyPage><ControlCenterPage /></LazyPage>} />

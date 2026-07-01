@@ -10,6 +10,8 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'maintenance-dispatch', label: 'Maintenance Dispatch Hub', path: '/app/maintenance-dispatch', icon: 'Wrench', enabled: true },
   { id: 'document-ocr-pipeline', label: 'OCR Pipeline Console', path: '/app/document-ocr-pipeline', icon: 'Scan', enabled: true },
   { id: 'ai-platform-diagnostics', label: 'AI Diagnostics Console', path: '/app/ai-platform-diagnostics', icon: 'Sliders', enabled: true },
+  { id: 'architecture-visualizer', label: 'AI Pipeline Visualizer', path: '/app/architecture-visualizer', icon: 'GitBranch', enabled: true },
+  { id: 'search-benchmark', label: 'Search Speed Benchmark', path: '/app/search-benchmark', icon: 'Activity', enabled: true },
   { id: 'documents', label: 'Document Intelligence', path: '/app/documents', icon: 'FileText', enabled: true },
   { id: 'processing', label: 'OCR & Processing', path: '/app/processing', icon: 'Scan', enabled: true },
   { id: 'copilot', label: 'AI Copilot', path: '/app/copilot', icon: 'MessageSquare', enabled: true },
