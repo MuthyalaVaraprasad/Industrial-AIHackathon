@@ -2,6 +2,10 @@ import type { NavItem } from '@/types';
 
 export const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', path: '/app/dashboard', icon: 'LayoutDashboard', enabled: true },
+  { id: 'command-center', label: 'AI Command Center', path: '/app/command-center', icon: 'Sliders', enabled: true },
+  { id: 'industrial-intelligence', label: 'Industrial Intelligence', path: '/app/industrial-intelligence', icon: 'BarChart3', enabled: true },
+  { id: 'decision-intelligence', label: 'Decision Intelligence', path: '/app/decision-intelligence', icon: 'Search', enabled: true },
+  { id: 'control-center', label: 'Industrial Control Center', path: '/app/control-center', icon: 'Box', enabled: true },
   { id: 'documents', label: 'Document Intelligence', path: '/app/documents', icon: 'FileText', enabled: true },
   { id: 'processing', label: 'OCR & Processing', path: '/app/processing', icon: 'Scan', enabled: true },
   { id: 'knowledge-graph', label: 'Knowledge Graph', path: '/app/knowledge-graph', icon: 'Share2', enabled: true },

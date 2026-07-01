@@ -1,0 +1,253 @@
+import { useState } from 'react';
+import {
+  Search, CheckCircle, ShieldAlert, Cpu, UserCheck, XCircle, BarChart3
+} from 'lucide-react';
+import { PageTransition } from '@/components/ui/PageTransition';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+
+interface DecisionItem {
+  id: string;
+  recommendation: string;
+  asset: string;
+  riskScore: number;
+  priority: 'critical' | 'high' | 'medium';
+  costImpact: string;
+  downtimeAvoided: string;
+  engineer: string;
+  status: 'pending' | 'approved' | 'rejected';
+  explainability: string;
+}
+
+const INITIAL_DECISIONS: DecisionItem[] = [
+  {
+    id: 'dec-1',
+    recommendation: 'Replace P-101 Shaft Mechanical Seal Pack',
+    asset: 'Centrifugal Pump P-101',
+    riskScore: 88,
+    priority: 'critical',
+    costImpact: '$45,000 savings',
+    downtimeAvoided: '12h downtime avoided',
+    engineer: 'Marcus Vance',
+    status: 'pending',
+    explainability: 'SHAP analysis indicates high shaft vibration (8.4mm/s) and bearing casing heat (172°F) have a 91% correlation with imminent seal failure models.',
+  },
+  {
+    id: 'dec-2',
+    recommendation: 'Perform Chemical Tube Cleaning HX-301',
+    asset: 'Heat Exchanger HX-301',
+    riskScore: 74,
+    priority: 'high',
+    costImpact: '$18,000 savings',
+    downtimeAvoided: '4h efficiency degradation avoided',
+    engineer: 'Marcus Vance',
+    status: 'pending',
+    explainability: 'Fouling coefficient factor rose by 22% in the past 14 days, reducing thermal heat transfer exchange rate below 75% efficiency bounds.',
+  },
+  {
+    id: 'dec-3',
+    recommendation: 'Upload Missing Q2 Lockout/Tagout Logs',
+    asset: 'Separator V-203',
+    riskScore: 65,
+    priority: 'medium',
+    costImpact: 'Avoid regulatory penalty ($12k)',
+    downtimeAvoided: 'Audit non-compliance mitigation',
+    engineer: 'Lisa Park',
+    status: 'pending',
+    explainability: 'Cross-reference validation database indicates training records and safety signs checks logs are empty for current audit period.',
+  }
+];
+
+export default function DecisionIntelligencePage() {
+  const [decisions, setDecisions] = useState<DecisionItem[]>(INITIAL_DECISIONS);
+  const [selectedId, setSelectedId] = useState<string>('dec-1');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const selectedDecision = decisions.find(d => d.id === selectedId) || decisions[0];
+
+  const handleStatusChange = (id: string, newStatus: 'approved' | 'rejected') => {
+    setDecisions(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d));
+  };
+
+  const handleAssignEngineer = (id: string, engineer: string) => {
+    setDecisions(prev => prev.map(d => d.id === id ? { ...d, engineer } : d));
+  };
+
+  const filteredDecisions = decisions.filter(d => 
+    d.recommendation.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    d.asset.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <PageTransition>
+      <div className="space-y-6">
+        <div>
+          <h1 className="page-title">Decision Intelligence Center</h1>
+          <p className="page-subtitle">Explainable AI prioritization, risk matrix, and action approvals ledger</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Column 1: Decision Queue list */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="bg-surface-900 border border-white/5 p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-2.5 border-b border-white/5">
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-accent-cyan" /> Pending AI Decisions Queue
+                </h2>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Filter decisions..."
+                    className="input-field pl-10 text-xs py-1.5 !mb-0"
+                  />
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead>
+                    <tr className="border-b border-white/5 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                      <th className="py-2.5 px-3">Decision Recommendation</th>
+                      <th className="py-2.5 px-3">Priority</th>
+                      <th className="py-2.5 px-3">Risk Score</th>
+                      <th className="py-2.5 px-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {filteredDecisions.map((dec) => (
+                      <tr
+                        key={dec.id}
+                        onClick={() => setSelectedId(dec.id)}
+                        className={`hover:bg-surface-850/50 cursor-pointer transition-colors ${selectedId === dec.id ? 'bg-primary-500/10' : ''}`}
+                      >
+                        <td className="py-3 px-3">
+                          <p className="font-semibold text-white">{dec.recommendation}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">{dec.asset}</p>
+                        </td>
+                        <td className="py-3 px-3">
+                          <Badge variant={dec.priority === 'critical' ? 'danger' : dec.priority === 'high' ? 'warning' : 'info'} className="text-[8px] uppercase">
+                            {dec.priority}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-3 font-mono font-bold text-white">{dec.riskScore}%</td>
+                        <td className="py-3 px-3">
+                          <Badge variant={dec.status === 'approved' ? 'success' : dec.status === 'rejected' ? 'danger' : 'warning'} className="text-[8px] uppercase">
+                            {dec.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Risk Prioritization Matrix (Visual Indicator Grid) */}
+            <Card className="bg-surface-900 border border-white/5 p-5">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3.5 flex items-center gap-1.5 border-b border-white/5 pb-2.5">
+                <BarChart3 className="w-4 h-4 text-primary-400" /> Risk Prioritization Matrix
+              </h3>
+              
+              <div className="grid grid-cols-3 gap-3 text-center text-xs font-semibold">
+                <div className="p-4 rounded-xl bg-accent-red/10 border border-accent-red/20 text-accent-red space-y-1">
+                  <p className="text-lg font-bold font-mono">1 Critical</p>
+                  <p className="text-[9px] text-slate-500 uppercase font-semibold">Risk score &gt; 80%</p>
+                </div>
+                <div className="p-4 rounded-xl bg-accent-amber/10 border border-accent-amber/20 text-accent-amber space-y-1">
+                  <p className="text-lg font-bold font-mono">1 Warning</p>
+                  <p className="text-[9px] text-slate-500 uppercase font-semibold">Risk score 60% - 80%</p>
+                </div>
+                <div className="p-4 rounded-xl bg-accent-green/10 border border-accent-green/20 text-accent-green space-y-1">
+                  <p className="text-lg font-bold font-mono">1 Stable</p>
+                  <p className="text-[9px] text-slate-500 uppercase font-semibold">Risk score &lt; 60%</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Column 2: Selected Decision details & approval workflow */}
+          <div className="lg:col-span-1 space-y-6">
+            {selectedDecision && (
+              <>
+                {/* AI Explainability Panel */}
+                <Card className="bg-surface-900 border border-white/5 p-4 space-y-4">
+                  <div className="border-b border-white/5 pb-2">
+                    <Badge variant="info" className="uppercase text-[8px]">{selectedDecision.priority}</Badge>
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider mt-1.5 flex items-center gap-1.5">
+                      <Cpu className="w-4 h-4 text-accent-cyan" /> AI Explainability Panel
+                    </h3>
+                  </div>
+
+                  <div className="space-y-3 text-xs leading-relaxed">
+                    <p className="text-slate-300 font-sans">{selectedDecision.explainability}</p>
+
+                    <div className="p-3 rounded-lg bg-surface-850 border border-white/5 space-y-2 font-mono text-[10px]">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Business Impact:</span>
+                        <span className="text-accent-green font-bold">{selectedDecision.costImpact}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Downtime avoided:</span>
+                        <span className="text-white font-bold">{selectedDecision.downtimeAvoided}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Confidence Score:</span>
+                        <span className="text-accent-cyan font-bold">{selectedDecision.riskScore}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Approval Workflow & Engineer Assignment */}
+                <Card className="bg-surface-900 border border-white/5 p-4 space-y-4">
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-2 flex items-center gap-1.5">
+                    <UserCheck className="w-4 h-4 text-slate-400" /> Action Assignment
+                  </h3>
+
+                  <div className="space-y-3.5 text-xs">
+                    {/* Engineer assignment */}
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-slate-400">Assigned Dispatch Engineer</label>
+                      <select
+                        value={selectedDecision.engineer}
+                        onChange={(e) => handleAssignEngineer(selectedDecision.id, e.target.value)}
+                        className="w-full bg-surface-850 border border-white/5 text-white rounded-lg p-2 text-xs focus:border-primary-500"
+                      >
+                        <option value="Marcus Vance">Marcus Vance (Maintenance Lead)</option>
+                        <option value="Lisa Park">Lisa Park (Compliance Officer)</option>
+                        <option value="Engineer Dispatch">Auto-dispatch Pool</option>
+                      </select>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleStatusChange(selectedDecision.id, 'rejected')}
+                        className="flex-1 text-[11px] py-2 h-auto"
+                        disabled={selectedDecision.status === 'rejected'}
+                      >
+                        <XCircle className="w-3.5 h-3.5 mr-1 text-accent-red" /> Reject
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={() => handleStatusChange(selectedDecision.id, 'approved')}
+                        className="flex-1 text-[11px] py-2 h-auto bg-gradient-to-r from-accent-green to-emerald-600"
+                        disabled={selectedDecision.status === 'approved'}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 mr-1" /> Approve Action
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </PageTransition>
+  );
+}

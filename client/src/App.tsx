@@ -13,6 +13,10 @@ const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const SignupPage = lazy(() => import('@/pages/auth/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const CommandCenterPage = lazy(() => import('@/pages/CommandCenterPage'));
+const IndustrialIntelligencePage = lazy(() => import('@/pages/IndustrialIntelligencePage'));
+const DecisionIntelligencePage = lazy(() => import('@/pages/DecisionIntelligencePage'));
+const ControlCenterPage = lazy(() => import('@/pages/ControlCenterPage'));
 const DocumentsPage = lazy(() => import('@/pages/DocumentsPage'));
 const ProcessingPage = lazy(() => import('@/pages/ProcessingPage'));
 const KnowledgeGraphPage = lazy(() => import('@/pages/KnowledgeGraphPage'));
@@ -82,6 +86,10 @@ export default function App() {
             >
               <Route index element={<Navigate to="/app/dashboard" replace />} />
               <Route path="dashboard" element={<LazyPage><DashboardPage /></LazyPage>} />
+              <Route path="command-center" element={<LazyPage><CommandCenterPage /></LazyPage>} />
+              <Route path="industrial-intelligence" element={<LazyPage><IndustrialIntelligencePage /></LazyPage>} />
+              <Route path="decision-intelligence" element={<LazyPage><DecisionIntelligencePage /></LazyPage>} />
+              <Route path="control-center" element={<LazyPage><ControlCenterPage /></LazyPage>} />
               <Route path="documents" element={<LazyPage><DocumentsPage /></LazyPage>} />
               <Route path="processing" element={<LazyPage><ProcessingPage /></LazyPage>} />
               <Route path="processing/:id" element={<LazyPage><ProcessingPage /></LazyPage>} />
