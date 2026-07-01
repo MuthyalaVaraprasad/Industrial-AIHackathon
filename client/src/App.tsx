@@ -19,14 +19,10 @@ const DecisionIntelligencePage = lazy(() => import('@/pages/DecisionIntelligence
 const ControlCenterPage = lazy(() => import('@/pages/ControlCenterPage'));
 const DocumentsPage = lazy(() => import('@/pages/DocumentsPage'));
 const ProcessingPage = lazy(() => import('@/pages/ProcessingPage'));
-const KnowledgeGraphPage = lazy(() => import('@/pages/KnowledgeGraphPage'));
 const CopilotPage = lazy(() => import('@/pages/CopilotPage'));
-const PIDPage = lazy(() => import('@/pages/PIDPage'));
 const MaintenancePage = lazy(() => import('@/pages/MaintenancePage'));
 const CompliancePage = lazy(() => import('@/pages/CompliancePage'));
-const LessonsPage = lazy(() => import('@/pages/LessonsPage'));
 const RCAPage = lazy(() => import('@/pages/RCAPage'));
-const DigitalTwinPage = lazy(() => import('@/pages/DigitalTwinPage'));
 const ExecutivePage = lazy(() => import('@/pages/ExecutivePage'));
 const QRScannerPage = lazy(() => import('@/pages/QRScannerPage'));
 const SimulatorPage = lazy(() => import('@/pages/SimulatorPage'));
@@ -93,14 +89,10 @@ export default function App() {
               <Route path="documents" element={<LazyPage><DocumentsPage /></LazyPage>} />
               <Route path="processing" element={<LazyPage><ProcessingPage /></LazyPage>} />
               <Route path="processing/:id" element={<LazyPage><ProcessingPage /></LazyPage>} />
-              <Route path="knowledge-graph" element={<LazyPage><KnowledgeGraphPage /></LazyPage>} />
               <Route path="copilot" element={<LazyPage><CopilotPage /></LazyPage>} />
-              <Route path="pid" element={<LazyPage><PIDPage /></LazyPage>} />
               <Route path="maintenance" element={<LazyPage><MaintenancePage /></LazyPage>} />
               <Route path="compliance" element={<LazyPage><CompliancePage /></LazyPage>} />
-              <Route path="lessons" element={<LazyPage><LessonsPage /></LazyPage>} />
               <Route path="rca" element={<LazyPage><RCAPage /></LazyPage>} />
-              <Route path="digital-twin" element={<LazyPage><DigitalTwinPage /></LazyPage>} />
               <Route path="executive" element={<LazyPage><ExecutivePage /></LazyPage>} />
               <Route path="qr-scanner" element={<LazyPage><QRScannerPage /></LazyPage>} />
               <Route path="simulator" element={<LazyPage><SimulatorPage /></LazyPage>} />
