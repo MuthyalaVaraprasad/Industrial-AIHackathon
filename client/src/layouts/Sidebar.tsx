@@ -3,7 +3,7 @@ import {
   LayoutDashboard, FileText, Scan, Share2, MessageSquare, GitBranch, Wrench,
   Shield, BookOpen, Search, Box, BarChart3, QrCode, Sliders, Users, Mic,
   FileOutput, Bell, Settings, ChevronLeft, ChevronRight, LogOut, Brain,
-  Activity,
+  Activity, Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,7 +15,7 @@ import { cn } from '@/utils';
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, FileText, Scan, Share2, MessageSquare, GitBranch, Wrench,
   Shield, BookOpen, Search, Box, BarChart3, QrCode, Sliders, Users, Mic,
-  FileOutput, Bell, Settings, Activity,
+  FileOutput, Bell, Settings, Activity, Zap,
 };
 
 interface SidebarProps {

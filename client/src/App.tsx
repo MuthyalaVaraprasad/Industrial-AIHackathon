@@ -13,7 +13,11 @@ const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const SignupPage = lazy(() => import('@/pages/auth/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
-const CommandCenterPage = lazy(() => import('@/pages/CommandCenterPage'));
+const HSESafetyPage = lazy(() => import('@/pages/HSESafetyPage'));
+const EnergyCarbonPage = lazy(() => import('@/pages/EnergyCarbonPage'));
+const MaintenanceDispatchPage = lazy(() => import('@/pages/MaintenanceDispatchPage'));
+const DocumentOcrPipelinePage = lazy(() => import('@/pages/DocumentOcrPipelinePage'));
+const AiPlatformDiagnosticsPage = lazy(() => import('@/pages/AiPlatformDiagnosticsPage'));
 const IndustrialIntelligencePage = lazy(() => import('@/pages/IndustrialIntelligencePage'));
 const DecisionIntelligencePage = lazy(() => import('@/pages/DecisionIntelligencePage'));
 const ControlCenterPage = lazy(() => import('@/pages/ControlCenterPage'));
@@ -21,8 +25,6 @@ const DocumentsPage = lazy(() => import('@/pages/DocumentsPage'));
 const ProcessingPage = lazy(() => import('@/pages/ProcessingPage'));
 const CopilotPage = lazy(() => import('@/pages/CopilotPage'));
 const MaintenancePage = lazy(() => import('@/pages/MaintenancePage'));
-const CompliancePage = lazy(() => import('@/pages/CompliancePage'));
-const RCAPage = lazy(() => import('@/pages/RCAPage'));
 const ExecutivePage = lazy(() => import('@/pages/ExecutivePage'));
 const QRScannerPage = lazy(() => import('@/pages/QRScannerPage'));
 const SimulatorPage = lazy(() => import('@/pages/SimulatorPage'));
@@ -82,7 +84,11 @@ export default function App() {
             >
               <Route index element={<Navigate to="/app/dashboard" replace />} />
               <Route path="dashboard" element={<LazyPage><DashboardPage /></LazyPage>} />
-              <Route path="command-center" element={<LazyPage><CommandCenterPage /></LazyPage>} />
+              <Route path="hse-safety" element={<LazyPage><HSESafetyPage /></LazyPage>} />
+              <Route path="energy-carbon" element={<LazyPage><EnergyCarbonPage /></LazyPage>} />
+              <Route path="maintenance-dispatch" element={<LazyPage><MaintenanceDispatchPage /></LazyPage>} />
+              <Route path="document-ocr-pipeline" element={<LazyPage><DocumentOcrPipelinePage /></LazyPage>} />
+              <Route path="ai-platform-diagnostics" element={<LazyPage><AiPlatformDiagnosticsPage /></LazyPage>} />
               <Route path="industrial-intelligence" element={<LazyPage><IndustrialIntelligencePage /></LazyPage>} />
               <Route path="decision-intelligence" element={<LazyPage><DecisionIntelligencePage /></LazyPage>} />
               <Route path="control-center" element={<LazyPage><ControlCenterPage /></LazyPage>} />
@@ -91,8 +97,6 @@ export default function App() {
               <Route path="processing/:id" element={<LazyPage><ProcessingPage /></LazyPage>} />
               <Route path="copilot" element={<LazyPage><CopilotPage /></LazyPage>} />
               <Route path="maintenance" element={<LazyPage><MaintenancePage /></LazyPage>} />
-              <Route path="compliance" element={<LazyPage><CompliancePage /></LazyPage>} />
-              <Route path="rca" element={<LazyPage><RCAPage /></LazyPage>} />
               <Route path="executive" element={<LazyPage><ExecutivePage /></LazyPage>} />
               <Route path="qr-scanner" element={<LazyPage><QRScannerPage /></LazyPage>} />
               <Route path="simulator" element={<LazyPage><SimulatorPage /></LazyPage>} />
